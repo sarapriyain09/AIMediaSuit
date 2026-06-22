@@ -1,0 +1,7 @@
+tunnel: ai-media-suite
+credentials-file: /etc/cloudflared/creds/credentials.json
+
+ingress:
+  - hostname: aimedia.velynxia.com
+    service: http://nginx:80
+  - service: http_status:404

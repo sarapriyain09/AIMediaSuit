@@ -1,0 +1,50 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ModuleType {
+  VOICE
+  SCRIPT
+  PODCAST
+  VIDEO
+  AVATAR
+}
+
+enum GenerationStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum VoiceType {
+  alloy
+  ash
+  ballad
+  coral
+  echo
+  sage
+  shimmer
+}
+
+model MediaGeneration {
+  id         String           @id @default(uuid()) @db.Uuid
+  userId     String           @db.Uuid
+  moduleType ModuleType
+  title      String
+  inputText  String
+  voice      VoiceType
+  speed      Decimal          @db.Decimal(3, 2)
+  duration   Int?
+  outputUrl  String?
+  status     GenerationStatus @default(PENDING)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  @@index([userId, moduleType, createdAt])
+}

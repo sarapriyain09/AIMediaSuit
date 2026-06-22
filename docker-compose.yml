@@ -1,0 +1,56 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: aimedia-postgres
+    environment:
+      POSTGRES_DB: aimedia
+      POSTGRES_USER: aimedia
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-aimedia123}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  aimedia:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: aimedia
+    environment:
+      DATABASE_URL: postgresql://aimedia:${POSTGRES_PASSWORD:-aimedia123}@postgres:5432/aimedia?schema=public
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
+      OpenAI__ApiKey: ${OPENAI_API_KEY}
+      OPENAI_TTS_MODEL: gpt-4o-mini-tts
+      VOICE_PROVIDER: openai
+      STORAGE_ROOT: /app/storage
+      DEMO_USER_ID: ${DEMO_USER_ID:-00000000-0000-0000-0000-000000000001}
+    volumes:
+      - audio_storage:/app/storage/audio
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    container_name: aimedia-nginx
+    depends_on:
+      - aimedia
+    ports:
+      - "8080:80"
+    volumes:
+      - ./deploy/nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    restart: unless-stopped
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: aimedia-cloudflared
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - nginx
+    restart: unless-stopped
+    profiles:
+      - tunnel
+
+volumes:
+  postgres_data:
+  audio_storage:
