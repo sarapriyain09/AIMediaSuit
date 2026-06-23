@@ -22,4 +22,4 @@ COPY --from=builder /app/prisma ./prisma
 RUN mkdir -p /app/storage/audio
 
 EXPOSE 3000
-CMD ["sh", "-c", "npx prisma migrate deploy && node server.js"]
+CMD ["node", "server.js"]
