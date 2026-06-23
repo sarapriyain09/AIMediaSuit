@@ -11,6 +11,52 @@ type Props = {
   initialStats: VoiceStatistics;
 };
 
+type StudioTab = "create" | "my-voices" | "templates" | "history";
+
+type VoiceTemplate = {
+  id: string;
+  name: string;
+  category: string;
+  content: string;
+  recommendedVoice: (typeof voiceList)[number];
+  recommendedSpeed: number;
+};
+
+const voiceTemplates: VoiceTemplate[] = [
+  {
+    id: "welcome",
+    name: "Welcome Message",
+    category: "Brand",
+    content: "Welcome to Velynxia. We are delighted to have you here and excited to support your growth journey.",
+    recommendedVoice: "alloy",
+    recommendedSpeed: 1.0,
+  },
+  {
+    id: "product",
+    name: "Product Introduction",
+    category: "Sales",
+    content: "Meet our latest AI media suite, designed to speed up content creation and deliver professional quality voiceovers.",
+    recommendedVoice: "echo",
+    recommendedSpeed: 1.0,
+  },
+  {
+    id: "announcement",
+    name: "Event Announcement",
+    category: "Marketing",
+    content: "Join us this Friday at 6 PM for a live product showcase featuring demos, Q and A, and special launch offers.",
+    recommendedVoice: "shimmer",
+    recommendedSpeed: 1.1,
+  },
+  {
+    id: "support",
+    name: "Support Follow-up",
+    category: "Support",
+    content: "Thank you for reaching out. We have received your request and our team will get back to you shortly with an update.",
+    recommendedVoice: "sage",
+    recommendedSpeed: 0.9,
+  },
+];
+
 async function fetchJson<T>(url: string, options?: RequestInit) {
   const response = await fetch(url, {
     ...options,
@@ -42,7 +88,7 @@ export function VoiceStudioClient({ initialHistory, initialStats }: Props) {
   const [loading, setLoading] = useState(false);
   const [activeUrl, setActiveUrl] = useState<string | null>(initialHistory[0]?.outputUrl ?? null);
   const [search, setSearch] = useState("");
-  const [activeTab, setActiveTab] = useState<"create" | "my-voices" | "templates" | "history">("create");
+  const [activeTab, setActiveTab] = useState<StudioTab>("create");
 
   const charsUsed = inputText.length;
   const speedLabel = useMemo(() => `${speed.toFixed(1)}x`, [speed]);
@@ -54,6 +100,54 @@ export function VoiceStudioClient({ initialHistory, initialStats }: Props) {
 
     return history.filter((item) => item.title.toLowerCase().includes(q) || item.voice.toLowerCase().includes(q));
   }, [history, search]);
+
+  const filteredTemplates = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) {
+      return voiceTemplates;
+    }
+
+    return voiceTemplates.filter((template) => {
+      return (
+        template.name.toLowerCase().includes(q) ||
+        template.category.toLowerCase().includes(q) ||
+        template.content.toLowerCase().includes(q)
+      );
+    });
+  }, [search]);
+
+  const myVoices = useMemo(() => {
+    const byVoice = new Map<(typeof voiceList)[number], { count: number; totalDuration: number }>();
+
+    history.forEach((item) => {
+      const current = byVoice.get(item.voice) ?? { count: 0, totalDuration: 0 };
+      byVoice.set(item.voice, {
+        count: current.count + 1,
+        totalDuration: current.totalDuration + (item.duration ?? 0),
+      });
+    });
+
+    return voiceList
+      .map((voiceName) => {
+        const usage = byVoice.get(voiceName) ?? { count: 0, totalDuration: 0 };
+        return {
+          voice: voiceName,
+          count: usage.count,
+          avgDuration: usage.count > 0 ? Math.round(usage.totalDuration / usage.count) : 0,
+        };
+      })
+      .filter((item) => item.count > 0)
+      .sort((a, b) => b.count - a.count);
+  }, [history]);
+
+  const applyTemplate = (template: VoiceTemplate) => {
+    setTitle(template.name);
+    setInputText(template.content);
+    setVoice(template.recommendedVoice);
+    setSpeed(template.recommendedSpeed);
+    setActiveTab("create");
+    toast.success("Template loaded into Create.");
+  };
 
   const refreshAll = async () => {
     const [newHistory, newStats] = await Promise.all([
@@ -152,7 +246,7 @@ export function VoiceStudioClient({ initialHistory, initialStats }: Props) {
         </div>
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-[1fr_1.1fr]">
+      {activeTab === "create" ? <section className="grid gap-4 xl:grid-cols-[1fr_1.1fr]">
         <article className="panel animate-float-in rounded-2xl p-4">
           <div className="mb-3 flex items-center gap-2">
             <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-500 text-xs font-semibold">1</span>
@@ -337,6 +431,120 @@ export function VoiceStudioClient({ initialHistory, initialStats }: Props) {
           </article>
         </div>
       </section>
+      : null}
+
+      {activeTab === "my-voices" ? (
+        <section className="panel animate-float-in rounded-2xl p-4">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-white">My Voices</h2>
+            <p className="text-sm text-slate-300">Saved usage based on your generated clips</p>
+          </div>
+
+          {myVoices.length === 0 ? (
+            <p className="rounded-xl border border-white/10 bg-[#071633] px-4 py-6 text-center text-sm text-slate-400">
+              No voice usage yet. Generate audio in Create to build your voice library.
+            </p>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {myVoices.map((item) => (
+                <div key={item.voice} className="rounded-xl border border-white/10 bg-[#071633] p-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-base font-semibold text-white">{item.voice}</h3>
+                    <span className="rounded-full border border-blue-300/30 bg-blue-400/10 px-2 py-0.5 text-xs text-blue-200">{item.count} clips</span>
+                  </div>
+                  <p className="mt-2 text-sm text-slate-300">Average duration: {formatDuration(item.avgDuration)}</p>
+                  <button
+                    className="mt-3 w-full rounded-lg border border-white/15 bg-[#0a1d40] px-3 py-2 text-sm text-slate-100 hover:bg-[#102852]"
+                    onClick={() => {
+                      setVoice(item.voice);
+                      setActiveTab("create");
+                    }}
+                  >
+                    Use This Voice
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      ) : null}
+
+      {activeTab === "templates" ? (
+        <section className="panel animate-float-in rounded-2xl p-4">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-white">Templates</h2>
+            <p className="text-sm text-slate-300">Start quickly with prebuilt copy blocks</p>
+          </div>
+
+          {filteredTemplates.length === 0 ? (
+            <p className="rounded-xl border border-white/10 bg-[#071633] px-4 py-6 text-center text-sm text-slate-400">
+              No templates match your search.
+            </p>
+          ) : (
+            <div className="grid gap-3 lg:grid-cols-2">
+              {filteredTemplates.map((template) => (
+                <article key={template.id} className="rounded-xl border border-white/10 bg-[#071633] p-4">
+                  <div className="mb-2 flex items-center justify-between">
+                    <h3 className="text-base font-semibold text-white">{template.name}</h3>
+                    <span className="rounded-full border border-violet-300/30 bg-violet-500/10 px-2 py-0.5 text-xs text-violet-200">{template.category}</span>
+                  </div>
+                  <p className="line-clamp-3 text-sm text-slate-300">{template.content}</p>
+                  <p className="mt-2 text-xs text-slate-400">Voice: {template.recommendedVoice} • Speed: {template.recommendedSpeed.toFixed(1)}x</p>
+                  <button className="mt-3 w-full rounded-lg border border-white/15 bg-[#0a1d40] px-3 py-2 text-sm text-slate-100 hover:bg-[#102852]" onClick={() => applyTemplate(template)}>
+                    Use Template
+                  </button>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+      ) : null}
+
+      {activeTab === "history" ? (
+        <section className="panel animate-float-in rounded-2xl p-4">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-white">Generation History</h2>
+            <button className="text-sm text-blue-300 hover:text-blue-200" onClick={refreshAll}>Refresh</button>
+          </div>
+
+          {filteredHistory.length === 0 ? (
+            <p className="rounded-xl border border-white/10 bg-[#071633] px-4 py-6 text-center text-sm text-slate-400">
+              No history found.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {filteredHistory.map((item) => (
+                <div key={item.id} className="grid gap-3 rounded-xl border border-white/10 bg-[#071633] px-3 py-3 md:grid-cols-[1.2fr_120px_120px_160px] md:items-center">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-slate-100">{item.title}</p>
+                    <p className="text-xs text-slate-400">{item.voice} • {formatDuration(item.duration)} • {format(new Date(item.createdAt), "MMM d, h:mm a")}</p>
+                  </div>
+                  <p className="text-xs text-slate-400">{item.status}</p>
+                  <button
+                    className="rounded-lg border border-white/15 bg-[#0a1d40] px-3 py-1.5 text-sm text-slate-100 hover:bg-[#102852] disabled:cursor-not-allowed disabled:opacity-40"
+                    onClick={() => setActiveUrl(item.outputUrl)}
+                    disabled={!item.outputUrl}
+                  >
+                    Play
+                  </button>
+                  <div className="flex items-center gap-2">
+                    <a
+                      className="rounded-lg border border-white/15 bg-[#0a1d40] px-3 py-1.5 text-sm text-slate-100 hover:bg-[#102852]"
+                      href={item.outputUrl ?? "#"}
+                      download
+                    >
+                      Download
+                    </a>
+                    <button className="rounded-lg border border-rose-400/30 bg-rose-500/10 px-3 py-1.5 text-sm text-rose-300 hover:bg-rose-500/20" onClick={() => void remove(item.id)}>
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      ) : null}
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Total Audio Generated" value={stats.totalAudioGenerated.toString()} />

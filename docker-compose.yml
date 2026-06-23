@@ -37,6 +37,9 @@ services:
       DATABASE_URL: postgresql://aimedia:${POSTGRES_PASSWORD:-aimedia123}@postgres:5432/aimedia?schema=public
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@velynxia.com}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Velynxia@2024!}
+      ADMIN_USER_ID: ${ADMIN_USER_ID:-11111111-1111-1111-1111-111111111111}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       OPENAI_TTS_MODEL: gpt-4o-mini-tts
       VOICE_PROVIDER: openai

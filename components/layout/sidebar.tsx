@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -15,11 +16,16 @@ export function Sidebar() {
 
   return (
     <aside className="panel animate-float-in rounded-3xl bg-gradient-to-b from-[#061230] to-[#030814] p-4 text-slate-200">
-      <div className="mb-5 flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-300 to-blue-500 font-bold text-slate-900">V</div>
-        <div>
-          <p className="display-font text-base font-semibold">Velynxia</p>
-          <p className="text-xs text-cyan-200/80">AI Media</p>
+      <div className="mb-5 rounded-2xl border border-white/10 bg-white/5 p-3">
+        <div className="rounded-xl bg-white p-2">
+          <Image
+            src="/velynxia-Logo.png"
+            alt="Velynxia"
+            width={360}
+            height={240}
+            className="h-auto w-full object-contain"
+            priority
+          />
         </div>
       </div>
 
