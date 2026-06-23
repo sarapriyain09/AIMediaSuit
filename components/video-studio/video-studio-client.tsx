@@ -42,6 +42,16 @@ type RenderVideoResponse = {
   totalDurationSec: number;
 };
 
+type AssetSearchResponse = {
+  items: Array<{
+    id: string;
+    previewUrl: string;
+    sourceUrl: string;
+    author: string;
+    provider: "pexels" | "pixabay";
+  }>;
+};
+
 type Template = {
   id: string;
   title: string;
@@ -198,6 +208,7 @@ export function VideoStudioClient() {
   const [speed, setSpeed] = useState(1);
   const [renderLoading, setRenderLoading] = useState(false);
   const [renderedUrl, setRenderedUrl] = useState<string | null>(null);
+  const [assetLoadingScene, setAssetLoadingScene] = useState<number | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<GenerateVideoResponse | null>(null);
@@ -461,6 +472,35 @@ export function VideoStudioClient() {
     }
   };
 
+  const autoFillSceneImage = async (scene: VideoSceneItem) => {
+    const query = scene.caption.trim() || topic.trim() || "business technology";
+    const orientation = aspectRatio === "9:16" ? "portrait" : aspectRatio === "1:1" ? "square" : "landscape";
+
+    setAssetLoadingScene(scene.sceneNumber);
+    try {
+      const response = await fetchJson<AssetSearchResponse>("/api/media/video/assets/search", {
+        method: "POST",
+        body: JSON.stringify({
+          query,
+          orientation,
+          perPage: 4,
+        }),
+      });
+
+      if (!response.items.length) {
+        toast.error("No stock assets found. Add image URL manually.");
+        return;
+      }
+
+      updateScene(scene.sceneNumber, { image: response.items[0].sourceUrl });
+      toast.success(`Scene ${scene.sceneNumber} image set from ${response.items[0].provider}.`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Asset search failed.");
+    } finally {
+      setAssetLoadingScene(null);
+    }
+  };
+
   return (
     <div className="space-y-4 text-slate-100">
       <section className="panel animate-float-in overflow-hidden rounded-3xl">
@@ -656,7 +696,7 @@ export function VideoStudioClient() {
                       </button>
                     </div>
 
-                    <div className="grid gap-2 md:grid-cols-3">
+                    <div className="grid gap-2 md:grid-cols-4">
                       <input
                         value={scene.caption}
                         onChange={(event) => updateScene(scene.sceneNumber, { caption: event.target.value })}
@@ -678,6 +718,14 @@ export function VideoStudioClient() {
                         placeholder="Duration"
                         className="rounded-lg border border-white/15 bg-slate-900/70 px-3 py-2 text-sm outline-none"
                       />
+                      <select
+                        value={scene.transition}
+                        onChange={(event) => updateScene(scene.sceneNumber, { transition: event.target.value as "cut" | "fade" })}
+                        className="rounded-lg border border-white/15 bg-slate-900/70 px-3 py-2 text-sm outline-none"
+                      >
+                        <option value="cut">Transition: Cut</option>
+                        <option value="fade">Transition: Fade</option>
+                      </select>
                     </div>
 
                     <textarea
@@ -687,6 +735,17 @@ export function VideoStudioClient() {
                       placeholder="Voiceover"
                       className="mt-2 w-full rounded-lg border border-white/15 bg-slate-900/70 px-3 py-2 text-sm outline-none"
                     />
+
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <button
+                        onClick={() => void autoFillSceneImage(scene)}
+                        disabled={assetLoadingScene === scene.sceneNumber}
+                        className="rounded border border-cyan-300/30 px-2 py-1 text-xs text-cyan-100 hover:bg-cyan-500/10 disabled:opacity-50"
+                      >
+                        {assetLoadingScene === scene.sceneNumber ? "Searching..." : "Auto Image (Pexels/Pixabay)"}
+                      </button>
+                      {scene.image ? <span className="truncate text-xs text-slate-400">{scene.image}</span> : null}
+                    </div>
                   </div>
                 ))}
               </div>

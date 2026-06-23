@@ -70,6 +70,13 @@ Voice, Script, Presentation, Podcast, and Subtitle modules are implemented. Back
 	- AI storyboard/scene generation
 	- My Videos, Templates, History, Favorites, Duplicate, Delete
 	- Editable output with copy/download
+- Video Studio (Phase 2 MVP)
+	- Scene timeline editor (caption, voiceover, image, duration, transition)
+	- Per-scene voice generation with OpenAI TTS
+	- Subtitle burn-in from generated SRT cues
+	- Background music selection and volume mix controls
+	- FFmpeg render pipeline with MP4 export
+	- Stock image auto-fill via Pexels/Pixabay search APIs
 
 ## Future Modules
 
@@ -162,6 +169,8 @@ Storage:
 - PATCH /api/media/video/[id]
 - POST /api/media/video/[id]
 - GET /api/media/video/statistics
+- POST /api/media/video/render
+- POST /api/media/video/assets/search
 
 ## Project Layout
 
@@ -178,6 +187,7 @@ Storage:
 - app/api/media/subtitle: Subtitle API handlers
 - app/api/media/video: Video API handlers
 - app/media/audio/[...path]: Local audio file serving route
+- app/media/video/[...path]: Local video file serving route
 - components/layout: Dashboard shell components
 - components/voice-studio: Voice Studio UI client component
 - components/subtitle-studio: Subtitle Studio UI client component
@@ -189,6 +199,8 @@ Storage:
 - lib/storage: Local file storage service
 - prisma: Prisma schema
 - storage/audio: Generated audio files
+- storage/video: Rendered video files
+- storage/music: Optional background music library (corporate, motivational, ambient, upbeat)
 
 ## Database Model
 

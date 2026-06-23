@@ -1,7 +1,6 @@
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { basename, join } from "node:path";
-import { randomUUID } from "node:crypto";
+import { join } from "node:path";
 import { spawn } from "node:child_process";
 import { VoiceProviderFactory } from "@/lib/providers/voice-provider-factory";
 import { saveVideoFile } from "@/lib/storage/video-storage";
@@ -113,6 +112,15 @@ async function downloadIfUrl(input: string, outputPath: string) {
   return outputPath;
 }
 
+async function exists(path: string) {
+  try {
+    await stat(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function renderVideo(options: RenderOptions) {
   const hasFfmpeg = await runCommand("ffmpeg", ["-version"]).then(
     () => true,
@@ -148,6 +156,15 @@ export async function renderVideo(options: RenderOptions) {
 
       const localImagePath = await downloadIfUrl(scene.image || "", imagePath).catch(() => "");
       const duration = Math.max(1, Math.round(scene.duration || 6));
+      const fadeDuration = Math.min(0.4, Math.max(0, duration - 0.2));
+      const shouldFade = scene.transition === "fade";
+      const baseScaleFilter = `scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,format=yuv420p`;
+      const sceneVideoFilter = shouldFade
+        ? `${baseScaleFilter},fade=t=in:st=0:d=${fadeDuration},fade=t=out:st=${Math.max(0, duration - fadeDuration)}:d=${fadeDuration}`
+        : baseScaleFilter;
+      const sceneAudioFilter = shouldFade
+        ? `afade=t=in:st=0:d=${fadeDuration},afade=t=out:st=${Math.max(0, duration - fadeDuration)}:d=${fadeDuration}`
+        : "anull";
 
       if (localImagePath) {
         await runCommand("ffmpeg", [
@@ -159,7 +176,9 @@ export async function renderVideo(options: RenderOptions) {
           "-i",
           voicePath,
           "-vf",
-          `scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,format=yuv420p`,
+          sceneVideoFilter,
+          "-af",
+          sceneAudioFilter,
           "-t",
           String(duration),
           "-c:v",
@@ -184,6 +203,12 @@ export async function renderVideo(options: RenderOptions) {
           `color=c=black:s=${width}x${height}:d=${duration}`,
           "-i",
           voicePath,
+          "-vf",
+          shouldFade
+            ? `fade=t=in:st=0:d=${fadeDuration},fade=t=out:st=${Math.max(0, duration - fadeDuration)}:d=${fadeDuration},format=yuv420p`
+            : "format=yuv420p",
+          "-af",
+          sceneAudioFilter,
           "-c:v",
           "libx264",
           "-preset",
@@ -257,29 +282,31 @@ export async function renderVideo(options: RenderOptions) {
       await mkdir(musicDir, { recursive: true });
       const musicPath = join(musicDir, musicTrackFiles[options.musicTrack]);
 
-      const mixedPath = join(workingDir, "mixed.mp4");
-      await runCommand("ffmpeg", [
-        "-y",
-        "-stream_loop",
-        "-1",
-        "-i",
-        musicPath,
-        "-i",
-        currentPath,
-        "-filter_complex",
-        `[0:a]volume=${options.musicVolume / 100}[m];[1:a]volume=${options.voiceVolume / 100}[v];[m][v]amix=inputs=2:duration=second:dropout_transition=2[aout]`,
-        "-map",
-        "1:v:0",
-        "-map",
-        "[aout]",
-        "-c:v",
-        "copy",
-        "-c:a",
-        "aac",
-        "-shortest",
-        mixedPath,
-      ]);
-      currentPath = mixedPath;
+      if (await exists(musicPath)) {
+        const mixedPath = join(workingDir, "mixed.mp4");
+        await runCommand("ffmpeg", [
+          "-y",
+          "-stream_loop",
+          "-1",
+          "-i",
+          musicPath,
+          "-i",
+          currentPath,
+          "-filter_complex",
+          `[0:a]volume=${options.musicVolume / 100}[m];[1:a]volume=${options.voiceVolume / 100}[v];[m][v]amix=inputs=2:duration=second:dropout_transition=2[aout]`,
+          "-map",
+          "1:v:0",
+          "-map",
+          "[aout]",
+          "-c:v",
+          "copy",
+          "-c:a",
+          "aac",
+          "-shortest",
+          mixedPath,
+        ]);
+        currentPath = mixedPath;
+      }
     }
 
     const finalBuffer = await readFile(currentPath);
