@@ -26,6 +26,7 @@ import { format } from "date-fns";
 import type { ScriptGoal, ScriptHistoryItem, ScriptLength, ScriptStatistics, ScriptTone } from "@/types/media";
 
 type StudioTab = "create" | "my-scripts" | "templates" | "history";
+type HistoryFilter = "all" | "favorites";
 
 type GenerateScriptResponse = {
   id: string;
@@ -118,6 +119,7 @@ export function ScriptStudioClient() {
   const [callToAction, setCallToAction] = useState("");
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState<StudioTab>("create");
+  const [historyFilter, setHistoryFilter] = useState<HistoryFilter>("all");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<GenerateScriptResponse | null>(null);
   const [editableScript, setEditableScript] = useState("");
@@ -170,19 +172,20 @@ export function ScriptStudioClient() {
   }, [history]);
 
   const filteredHistory = useMemo(() => {
+    const base = historyFilter === "favorites" ? history.filter((item) => item.isFavorite) : history;
     const q = search.trim().toLowerCase();
     if (!q) {
-      return history;
+      return base;
     }
 
-    return history.filter((item) => {
+    return base.filter((item) => {
       return (
         item.title.toLowerCase().includes(q) ||
         item.goal.toLowerCase().includes(q) ||
         item.outputText.toLowerCase().includes(q)
       );
     });
-  }, [history, search]);
+  }, [history, historyFilter, search]);
 
   const exportPdf = () => {
     if (!editableScript.trim()) {
@@ -641,6 +644,25 @@ export function ScriptStudioClient() {
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-xl font-semibold text-white">Script History</h2>
             <button className="text-sm text-blue-300 hover:text-blue-200" onClick={refreshAll}>Refresh</button>
+          </div>
+
+          <div className="mb-4 flex items-center gap-2 text-sm">
+            <button
+              className={`rounded-lg px-3 py-1.5 transition ${
+                historyFilter === "all" ? "bg-blue-500/25 text-white" : "text-slate-300 hover:bg-white/10"
+              }`}
+              onClick={() => setHistoryFilter("all")}
+            >
+              All
+            </button>
+            <button
+              className={`rounded-lg px-3 py-1.5 transition ${
+                historyFilter === "favorites" ? "bg-amber-500/25 text-amber-100" : "text-slate-300 hover:bg-white/10"
+              }`}
+              onClick={() => setHistoryFilter("favorites")}
+            >
+              Favorites
+            </button>
           </div>
 
           {filteredHistory.length === 0 ? (

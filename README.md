@@ -23,6 +23,7 @@ Phase 1 implements Voice Studio and keeps the architecture ready for future modu
 	- PDF export (jsPDF + jspdf-autotable)
 - Script Studio (Phase 3)
 	- Favorite and duplicate actions for scripts
+	- Favorites filter in History
 	- Drag-and-drop template ordering (dnd-kit)
 	- Handoff to Voice Studio with script prefill
 
