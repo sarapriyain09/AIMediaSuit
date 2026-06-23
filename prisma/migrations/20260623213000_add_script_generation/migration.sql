@@ -1,5 +1,13 @@
 DO $$
 BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'GenerationStatus') THEN
+    CREATE TYPE "GenerationStatus" AS ENUM ('PENDING', 'PROCESSING', 'COMPLETED', 'FAILED');
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'ScriptGoal') THEN
     CREATE TYPE "ScriptGoal" AS ENUM ('social', 'ad', 'youtube', 'email', 'sales');
   END IF;
