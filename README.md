@@ -7,6 +7,10 @@ Phase 1 implements Voice Studio and keeps the architecture ready for future modu
 ## Implemented Module
 
 - Voice Studio (MVP)
+	- Create
+	- My Voices
+	- Templates
+	- History
 
 ## Future Modules
 
@@ -42,6 +46,12 @@ Authentication:
 
 - next-auth
 
+Default Admin Login:
+
+- Email: admin@velynxia.com
+- Password: Velynxia@2024!
+- Configure with env vars: ADMIN_EMAIL, ADMIN_PASSWORD, ADMIN_USER_ID
+
 Database:
 
 - PostgreSQL
@@ -53,6 +63,14 @@ ORM:
 AI Provider:
 
 - OpenAI
+
+Shared Toolkit Baseline:
+
+- dnd-kit
+- nodemailer
+- Twilio
+- jsPDF
+- jspdf-autotable
 
 Storage:
 
@@ -76,6 +94,12 @@ Deployment:
 - Copy URL
 - History and delete
 - Statistics dashboard
+
+## Authentication
+
+- Home route provides admin login UI.
+- Dashboard routes require an authenticated next-auth session.
+- Credentials provider supports email/password sign-in.
 
 ## API Routes
 
@@ -172,3 +196,9 @@ After setting CLOUDFLARE_TUNNEL_TOKEN:
 docker compose --profile tunnel up -d
 
 Set hostname aimedia.velynxia.com to the tunnel.
+
+## Security Maintenance
+
+- Run `npm audit` regularly.
+- Apply safe fixes with `npm audit fix`.
+- Some advisories may require semver-major upgrades; validate app compatibility before using force upgrades.
