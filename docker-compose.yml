@@ -8,7 +8,25 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-aimedia123}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-aimedia} -d ${POSTGRES_DB:-aimedia}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     restart: unless-stopped
+
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: aimedia-migrate
+    command: ["npx", "prisma@6.13.0", "migrate", "deploy"]
+    environment:
+      DATABASE_URL: postgresql://aimedia:${POSTGRES_PASSWORD:-aimedia123}@postgres:5432/aimedia?schema=public
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
 
   aimedia:
     build:
@@ -27,7 +45,8 @@ services:
     volumes:
       - audio_storage:/app/storage/audio
     depends_on:
-      - postgres
+      migrate:
+        condition: service_completed_successfully
     restart: unless-stopped
 
   nginx:

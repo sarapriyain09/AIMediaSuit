@@ -150,6 +150,11 @@ Enums:
 
 	docker compose up --build -d
 
+Note:
+
+- The `migrate` service runs Prisma migrations once (`prisma migrate deploy`) before `aimedia` starts.
+- If you need to rerun migrations manually: `docker compose run --rm migrate`
+
 3. Open:
 
 - http://localhost:8080
