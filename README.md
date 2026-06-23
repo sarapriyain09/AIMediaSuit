@@ -19,6 +19,12 @@ Phase 1 implements Voice Studio and keeps the architecture ready for future modu
 
 ## Tech Stack
 
+Platform Baseline Alignment:
+
+- This app follows the common Velynxia framework baseline used across Growth apps.
+- Database is intentionally PostgreSQL + Prisma for this app (exception to SQLite baseline).
+- Shared toolkit dependencies are included for cross-app consistency: `dnd-kit`, `nodemailer`, `twilio`, `jspdf`, `jspdf-autotable`.
+
 Framework:
 
 - Next.js 16 App Router
