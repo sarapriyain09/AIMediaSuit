@@ -52,6 +52,12 @@ type AssetSearchResponse = {
   }>;
 };
 
+type AssetGenerateResponse = {
+  id: string;
+  imageUrl: string;
+  provider: "gpt-image" | "flux";
+};
+
 type Template = {
   id: string;
   title: string;
@@ -209,6 +215,7 @@ export function VideoStudioClient() {
   const [renderLoading, setRenderLoading] = useState(false);
   const [renderedUrl, setRenderedUrl] = useState<string | null>(null);
   const [assetLoadingScene, setAssetLoadingScene] = useState<number | null>(null);
+  const [assetProvider, setAssetProvider] = useState<"gpt-image" | "flux">("gpt-image");
 
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<GenerateVideoResponse | null>(null);
@@ -501,6 +508,30 @@ export function VideoStudioClient() {
     }
   };
 
+  const generateSceneImage = async (scene: VideoSceneItem) => {
+    const promptText = scene.caption.trim() || scene.voiceover.trim() || topic.trim() || "business marketing visual";
+    const orientation = aspectRatio === "9:16" ? "portrait" : aspectRatio === "1:1" ? "square" : "landscape";
+
+    setAssetLoadingScene(scene.sceneNumber);
+    try {
+      const response = await fetchJson<AssetGenerateResponse>("/api/media/video/assets/generate", {
+        method: "POST",
+        body: JSON.stringify({
+          prompt: promptText,
+          provider: assetProvider,
+          orientation,
+        }),
+      });
+
+      updateScene(scene.sceneNumber, { image: response.imageUrl });
+      toast.success(`Scene ${scene.sceneNumber} generated with ${response.provider}.`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Image generation failed.");
+    } finally {
+      setAssetLoadingScene(null);
+    }
+  };
+
   return (
     <div className="space-y-4 text-slate-100">
       <section className="panel animate-float-in overflow-hidden rounded-3xl">
@@ -738,6 +769,13 @@ export function VideoStudioClient() {
 
                     <div className="mt-2 flex flex-wrap items-center gap-2">
                       <button
+                        onClick={() => void generateSceneImage(scene)}
+                        disabled={assetLoadingScene === scene.sceneNumber}
+                        className="rounded border border-violet-300/30 px-2 py-1 text-xs text-violet-100 hover:bg-violet-500/10 disabled:opacity-50"
+                      >
+                        {assetLoadingScene === scene.sceneNumber ? "Generating..." : `Generate Image (${assetProvider === "gpt-image" ? "GPT" : "Flux"})`}
+                      </button>
+                      <button
                         onClick={() => void autoFillSceneImage(scene)}
                         disabled={assetLoadingScene === scene.sceneNumber}
                         className="rounded border border-cyan-300/30 px-2 py-1 text-xs text-cyan-100 hover:bg-cyan-500/10 disabled:opacity-50"
@@ -795,6 +833,20 @@ export function VideoStudioClient() {
                     <input type="number" min={0.5} max={2} step={0.1} value={speed} onChange={(event) => setSpeed(Number(event.target.value) || 1)} className="rounded border border-white/15 bg-slate-900/70 px-2 py-1.5" />
                     <label className="flex items-center gap-2 text-xs text-slate-300"><input type="checkbox" checked={includeSubtitles} onChange={(event) => setIncludeSubtitles(event.target.checked)} /> Burn subtitles</label>
                   </div>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-white/10 bg-slate-950/40 p-3">
+                <p className="text-sm font-semibold">Generated Image Provider</p>
+                <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-slate-200">
+                  <label className="flex items-center gap-2">
+                    <input type="radio" checked={assetProvider === "gpt-image"} onChange={() => setAssetProvider("gpt-image")} />
+                    <span>GPT Image</span>
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input type="radio" checked={assetProvider === "flux"} onChange={() => setAssetProvider("flux")} />
+                    <span>Flux</span>
+                  </label>
                 </div>
               </div>
 

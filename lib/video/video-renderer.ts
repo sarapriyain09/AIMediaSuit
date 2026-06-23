@@ -98,6 +98,17 @@ async function writeSubtitlesFile(filePath: string, scenes: RenderScene[]) {
 }
 
 async function downloadIfUrl(input: string, outputPath: string) {
+  if (input.startsWith("data:image/")) {
+    const match = input.match(/^data:image\/[a-zA-Z0-9.+-]+;base64,(.+)$/);
+    if (!match) {
+      throw new Error("Invalid data URL image payload.");
+    }
+
+    const bytes = Buffer.from(match[1], "base64");
+    await writeFile(outputPath, bytes);
+    return outputPath;
+  }
+
   if (!/^https?:\/\//i.test(input)) {
     return input;
   }

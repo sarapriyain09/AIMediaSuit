@@ -171,6 +171,7 @@ Storage:
 - GET /api/media/video/statistics
 - POST /api/media/video/render
 - POST /api/media/video/assets/search
+- POST /api/media/video/assets/generate
 
 ## Project Layout
 
@@ -391,3 +392,9 @@ Enums:
 - Run `npm audit` regularly.
 - Apply safe fixes with `npm audit fix`.
 - Some advisories may require semver-major upgrades; validate app compatibility before using force upgrades.
+
+## Optional Image Provider Keys
+
+- `OPENAI_API_KEY` (for GPT Image generation)
+- `FLUX_API_KEY` (for Flux generation)
+- `FLUX_API_URL` (optional custom Flux endpoint; defaults to Hugging Face FLUX.1-schnell inference URL)
