@@ -123,6 +123,10 @@ model PodcastGeneration {
   outline    String           @default("")
   prompt     String
   script     String
+  outputUrl  String?
+  duration   Int?
+  segmentCount Int            @default(0)
+  segments   Json?
   isFavorite Boolean          @default(false)
   status     GenerationStatus @default(COMPLETED)
   createdAt  DateTime         @default(now())

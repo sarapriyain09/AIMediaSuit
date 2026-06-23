@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolveUserId } from "@/lib/auth/user-id";
 import { prisma } from "@/lib/db/prisma";
+import { deleteAudioByPublicUrl } from "@/lib/storage/audio-storage";
 
 export const runtime = "nodejs";
 
@@ -19,11 +20,24 @@ export async function DELETE(request: NextRequest, { params }: Params) {
   try {
     const found = await prisma.podcastGeneration.findFirst({
       where: { id, userId },
-      select: { id: true },
+      select: { id: true, outputUrl: true, segments: true },
     });
 
     if (!found) {
       return NextResponse.json({ error: "Episode not found." }, { status: 404 });
+    }
+
+    if (found.outputUrl) {
+      await deleteAudioByPublicUrl(found.outputUrl);
+    }
+
+    if (Array.isArray(found.segments)) {
+      for (const segment of found.segments) {
+        const outputUrl = typeof segment === "object" && segment && "outputUrl" in segment ? (segment as { outputUrl?: unknown }).outputUrl : null;
+        if (typeof outputUrl === "string" && outputUrl) {
+          await deleteAudioByPublicUrl(outputUrl);
+        }
+      }
     }
 
     await prisma.podcastGeneration.delete({ where: { id } });
@@ -102,6 +116,10 @@ export async function POST(request: NextRequest, { params }: Params) {
         outline: source.outline,
         prompt: source.prompt,
         script: source.script,
+        outputUrl: source.outputUrl,
+        duration: source.duration,
+        segmentCount: source.segmentCount,
+        ...(source.segments === null ? {} : { segments: source.segments }),
         status: source.status,
         isFavorite: false,
       },

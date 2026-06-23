@@ -8,6 +8,7 @@ import type {
   PodcastFormat,
   PodcastHistoryItem,
   PodcastLength,
+  PodcastSegment,
   PodcastStatistics,
   PodcastTone,
 } from "@/types/media";
@@ -27,6 +28,10 @@ type GeneratePodcastResponse = {
   outline: string;
   prompt: string;
   script: string;
+  outputUrl: string | null;
+  duration: number | null;
+  segmentCount: number;
+  segments: PodcastSegment[];
   isFavorite: boolean;
   status: "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
   createdAt: string;
@@ -121,6 +126,7 @@ export function PodcastStudioClient() {
   const [hostsText, setHostsText] = useState("Host, Guest");
   const [outline, setOutline] = useState("");
   const [prompt, setPrompt] = useState("");
+  const [synthesizeAudio, setSynthesizeAudio] = useState(true);
 
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<GeneratePodcastResponse | null>(null);
@@ -224,6 +230,10 @@ export function PodcastStudioClient() {
       outline: item.outline,
       prompt: item.prompt,
       script: item.script,
+      outputUrl: item.outputUrl,
+      duration: item.duration,
+      segmentCount: item.segmentCount,
+      segments: item.segments,
       isFavorite: item.isFavorite,
       status: item.status,
       createdAt: item.createdAt,
@@ -314,6 +324,7 @@ export function PodcastStudioClient() {
           hosts: hostsText,
           outline,
           prompt,
+          synthesizeAudio,
         }),
       });
 
@@ -458,6 +469,16 @@ export function PodcastStudioClient() {
               onChange={(event) => setPrompt(event.target.value)}
             />
 
+            <label className="mt-3 flex items-center gap-2 text-sm text-blue-100/75">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-white/20 bg-[#05122a]"
+                checked={synthesizeAudio}
+                onChange={(event) => setSynthesizeAudio(event.target.checked)}
+              />
+              Generate multi-speaker audio (Phase 2 beta)
+            </label>
+
             <button
               className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-500 to-violet-500 px-4 py-3 text-base font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
               onClick={generate}
@@ -529,6 +550,31 @@ export function PodcastStudioClient() {
                   Download TXT
                 </button>
               </div>
+
+              {result?.outputUrl ? (
+                <div className="mt-4 rounded-xl border border-white/10 bg-[#071633] p-3">
+                  <p className="mb-2 text-xs uppercase tracking-[0.12em] text-blue-100/70">Episode Audio</p>
+                  <audio controls className="w-full" src={result.outputUrl} preload="none" />
+                  <p className="mt-2 text-xs text-slate-400">
+                    {result.segmentCount} segments {result.duration ? `| ~${result.duration}s` : ""}
+                  </p>
+                </div>
+              ) : null}
+
+              {result?.segments?.length ? (
+                <div className="mt-4 space-y-2">
+                  <p className="text-xs uppercase tracking-[0.12em] text-blue-100/70">Speaker Segments</p>
+                  {result.segments.slice(0, 8).map((segment, index) => (
+                    <div key={`${segment.speaker}-${index}`} className="rounded-lg border border-white/10 bg-[#071633] p-2">
+                      <div className="mb-1 flex items-center justify-between text-xs text-slate-300">
+                        <span>{segment.speaker} | {segment.voice}</span>
+                        <span>{segment.duration}s</span>
+                      </div>
+                      {segment.outputUrl ? <audio controls className="w-full" src={segment.outputUrl} preload="none" /> : null}
+                    </div>
+                  ))}
+                </div>
+              ) : null}
             </article>
           </div>
         </section>

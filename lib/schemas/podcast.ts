@@ -22,6 +22,7 @@ export const generatePodcastSchema = z.object({
     ),
   outline: z.string().max(2000).optional().default(""),
   prompt: z.string().min(1).max(4000),
+  synthesizeAudio: z.boolean().optional().default(true),
 });
 
 export type GeneratePodcastInput = z.infer<typeof generatePodcastSchema>;

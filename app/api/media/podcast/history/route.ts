@@ -30,6 +30,10 @@ export async function GET(request: NextRequest) {
         outline: string;
         prompt: string;
         script: string;
+        outputUrl: string | null;
+        duration: number | null;
+        segmentCount: number;
+        segments: unknown;
         isFavorite: boolean;
         status: string;
         createdAt: Date;
@@ -45,6 +49,10 @@ export async function GET(request: NextRequest) {
         outline: row.outline,
         prompt: row.prompt,
         script: row.script,
+        outputUrl: row.outputUrl,
+        duration: row.duration,
+        segmentCount: row.segmentCount,
+        segments: Array.isArray(row.segments) ? row.segments : [],
         isFavorite: row.isFavorite,
         status: row.status,
         createdAt: row.createdAt.toISOString(),

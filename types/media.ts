@@ -85,6 +85,15 @@ export interface GeneratePodcastPayload {
   hosts?: string;
   outline?: string;
   prompt: string;
+  synthesizeAudio?: boolean;
+}
+
+export interface PodcastSegment {
+  speaker: string;
+  voice: VoiceType;
+  text: string;
+  outputUrl: string | null;
+  duration: number;
 }
 
 export interface PodcastHistoryItem {
@@ -99,6 +108,10 @@ export interface PodcastHistoryItem {
   outline: string;
   prompt: string;
   script: string;
+  outputUrl: string | null;
+  duration: number | null;
+  segmentCount: number;
+  segments: PodcastSegment[];
   isFavorite: boolean;
   status: GenerationStatus;
   createdAt: string;
