@@ -164,3 +164,41 @@ export interface PresentationStatistics {
   mostUsedGoal: string;
   recentDecks: number;
 }
+
+export const subtitleFormatList = ["srt", "vtt", "captions"] as const;
+export const subtitleToneList = ["verbatim", "readable", "engaging"] as const;
+
+export type SubtitleFormat = (typeof subtitleFormatList)[number];
+export type SubtitleTone = (typeof subtitleToneList)[number];
+
+export interface GenerateSubtitlePayload {
+  title?: string;
+  topic: string;
+  language: string;
+  format: SubtitleFormat;
+  tone: SubtitleTone;
+  sourceText: string;
+  includeTimestamps?: boolean;
+}
+
+export interface SubtitleHistoryItem {
+  id: string;
+  title: string;
+  topic: string;
+  language: string;
+  format: SubtitleFormat;
+  tone: SubtitleTone;
+  sourceText: string;
+  outputText: string;
+  cueCount: number;
+  includeTimestamps: boolean;
+  isFavorite: boolean;
+  status: GenerationStatus;
+  createdAt: string;
+}
+
+export interface SubtitleStatistics {
+  totalSubtitlesGenerated: number;
+  mostUsedFormat: string;
+  recentSubtitles: number;
+}

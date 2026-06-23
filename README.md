@@ -2,7 +2,7 @@
 
 AI Media Suite is a standalone module in the Velynxia Growth Platform.
 
-Voice, Script, Presentation, and Podcast modules are implemented. Avatar Studio is the next active build target.
+Voice, Script, Presentation, Podcast, and Subtitle modules are implemented. Background Music Studio is the next active build target.
 
 ## Studio Build Order
 
@@ -17,7 +17,7 @@ Voice, Script, Presentation, and Podcast modules are implemented. Avatar Studio 
 
 ## Current Build Focus
 
-- Avatar Studio (Studio 8) is the next module to build.
+- Background Music Studio (Studio 6) is the next module to build.
 
 ## Implemented Modules
 
@@ -52,9 +52,17 @@ Voice, Script, Presentation, and Podcast modules are implemented. Avatar Studio 
 	- Templates, history, favorites, duplicate, delete
 	- Multi-speaker segment generation
 	- Segment audio + stitched episode output (beta)
+- Subtitle Studio (Phase 1)
+	- Subtitle input controls (topic, language, format, tone)
+	- Template presets
+	- AI subtitle generation (SRT/VTT/Captions)
+	- My Subtitles, Templates, History, Favorites, Duplicate, Delete
+	- Editable output with copy/download
 
 ## Future Modules
 
+- Background Music Studio
+- Video Studio
 - Avatar Studio
 
 ## Tech Stack
@@ -161,6 +169,12 @@ Deployment:
 - PATCH /api/media/presentation/[id]
 - POST /api/media/presentation/[id]
 - GET /api/media/presentation/statistics
+- POST /api/media/subtitle/generate
+- GET /api/media/subtitle/history
+- DELETE /api/media/subtitle/[id]
+- PATCH /api/media/subtitle/[id]
+- POST /api/media/subtitle/[id]
+- GET /api/media/subtitle/statistics
 
 ## Project Layout
 
@@ -168,14 +182,17 @@ Deployment:
 - app/dashboard/script-studio: Script Studio page
 - app/dashboard/presentation-studio: Presentation Studio page
 - app/dashboard/podcast-studio: Podcast Studio page
+- app/dashboard/subtitle-studio: Subtitle Studio page
 - app/dashboard/video-studio: Coming soon page
 - app/api/media/voice: Voice API handlers
 - app/api/media/script: Script API handlers
 - app/api/media/presentation: Presentation API handlers
 - app/api/media/podcast: Podcast API handlers
+- app/api/media/subtitle: Subtitle API handlers
 - app/media/audio/[...path]: Local audio file serving route
 - components/layout: Dashboard shell components
 - components/voice-studio: Voice Studio UI client component
+- components/subtitle-studio: Subtitle Studio UI client component
 - lib/auth: next-auth config and user resolution
 - lib/db: Prisma client
 - lib/providers: Provider interfaces and provider factory

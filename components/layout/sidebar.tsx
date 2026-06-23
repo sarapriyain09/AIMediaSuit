@@ -9,6 +9,7 @@ const navItems = [
   { href: "/dashboard/script-studio", label: "Script Studio", available: true },
   { href: "/dashboard/presentation-studio", label: "Presentation Studio", available: true },
   { href: "/dashboard/podcast-studio", label: "Podcast Studio", available: true },
+  { href: "/dashboard/subtitle-studio", label: "Subtitle Studio", available: true },
   { href: "/dashboard/video-studio", label: "Video Studio", available: false },
 ];
 
