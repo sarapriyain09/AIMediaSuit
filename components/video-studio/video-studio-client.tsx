@@ -6,8 +6,11 @@ import toast from "react-hot-toast";
 import type {
   VideoAspectRatio,
   VideoHistoryItem,
+  VideoMusicTrack,
+  VideoSceneItem,
   VideoStatistics,
   VideoStyle,
+  VoiceType,
 } from "@/types/media";
 
 type StudioTab = "create" | "my-videos" | "templates" | "history";
@@ -31,6 +34,12 @@ type GenerateVideoResponse = {
     aspectRatio: VideoAspectRatio;
     durationSec: number;
   };
+};
+
+type RenderVideoResponse = {
+  outputUrl: string;
+  sceneCount: number;
+  totalDurationSec: number;
 };
 
 type Template = {
@@ -98,6 +107,64 @@ async function fetchJson<T>(url: string, options?: RequestInit) {
   return (await response.json()) as T;
 }
 
+function parseScenesFromPlan(outputText: string): VideoSceneItem[] {
+  const lines = outputText.split(/\r?\n/);
+  const scenes: VideoSceneItem[] = [];
+  let current: VideoSceneItem | null = null;
+
+  for (const line of lines) {
+    const raw = line.trim();
+    const sceneHeader = raw.match(/^Scene\s+(\d+)\s*:/i);
+    if (sceneHeader) {
+      if (current) {
+        scenes.push(current);
+      }
+      current = {
+        sceneNumber: Number(sceneHeader[1]),
+        duration: 6,
+        caption: "",
+        voiceover: "",
+        image: "",
+        transition: "cut",
+      };
+      continue;
+    }
+
+    if (!current) {
+      continue;
+    }
+
+    if (raw.toLowerCase().startsWith("- caption:")) {
+      current.caption = raw.replace(/^-\s*caption\s*:/i, "").trim();
+      continue;
+    }
+
+    if (raw.toLowerCase().startsWith("- voiceover:")) {
+      current.voiceover = raw.replace(/^-\s*voiceover\s*:/i, "").trim();
+      continue;
+    }
+  }
+
+  if (current) {
+    scenes.push(current);
+  }
+
+  if (scenes.length === 0) {
+    return [
+      {
+        sceneNumber: 1,
+        duration: 6,
+        caption: "",
+        voiceover: "",
+        image: "",
+        transition: "cut",
+      },
+    ];
+  }
+
+  return scenes;
+}
+
 export function VideoStudioClient() {
   const [activeTab, setActiveTab] = useState<StudioTab>("create");
   const [historyFilter, setHistoryFilter] = useState<HistoryFilter>("all");
@@ -111,6 +178,26 @@ export function VideoStudioClient() {
   const [durationSec, setDurationSec] = useState(60);
   const [prompt, setPrompt] = useState("");
   const [includeVoiceover, setIncludeVoiceover] = useState(true);
+
+  const [scenes, setScenes] = useState<VideoSceneItem[]>([
+    {
+      sceneNumber: 1,
+      duration: 6,
+      caption: "",
+      voiceover: "",
+      image: "",
+      transition: "cut",
+    },
+  ]);
+  const [musicTrack, setMusicTrack] = useState<VideoMusicTrack>("none");
+  const [musicVolume, setMusicVolume] = useState(20);
+  const [voiceVolume, setVoiceVolume] = useState(100);
+  const [quality, setQuality] = useState<"1080p" | "720p">("1080p");
+  const [includeSubtitles, setIncludeSubtitles] = useState(true);
+  const [voice, setVoice] = useState<VoiceType>("alloy");
+  const [speed, setSpeed] = useState(1);
+  const [renderLoading, setRenderLoading] = useState(false);
+  const [renderedUrl, setRenderedUrl] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<GenerateVideoResponse | null>(null);
@@ -185,6 +272,16 @@ export function VideoStudioClient() {
     setAspectRatio(template.aspectRatio);
     setDurationSec(template.durationSec);
     setPrompt(template.prompt);
+    setScenes([
+      {
+        sceneNumber: 1,
+        duration: 6,
+        caption: template.topic,
+        voiceover: template.prompt,
+        image: "",
+        transition: "cut",
+      },
+    ]);
     setActiveTab("create");
     toast.success("Template loaded.");
   };
@@ -235,6 +332,8 @@ export function VideoStudioClient() {
     setPrompt(item.prompt);
     setIncludeVoiceover(item.includeVoiceover);
     setEditablePlan(item.outputText);
+    setScenes(parseScenesFromPlan(item.outputText));
+    setRenderedUrl(item.outputUrl);
     setResult({
       id: item.id,
       title: item.title,
@@ -292,12 +391,73 @@ export function VideoStudioClient() {
 
       setResult(generated);
       setEditablePlan(generated.outputText);
+      setScenes(parseScenesFromPlan(generated.outputText));
+      setRenderedUrl(generated.outputUrl);
       toast.success("Video plan generated successfully.");
       await refreshAll();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to generate video plan.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const updateScene = (sceneNumber: number, patch: Partial<VideoSceneItem>) => {
+    setScenes((prev) => prev.map((scene) => (scene.sceneNumber === sceneNumber ? { ...scene, ...patch } : scene)));
+  };
+
+  const addScene = () => {
+    setScenes((prev) => [
+      ...prev,
+      {
+        sceneNumber: prev.length + 1,
+        duration: 6,
+        caption: "",
+        voiceover: "",
+        image: "",
+        transition: "cut",
+      },
+    ]);
+  };
+
+  const removeScene = (sceneNumber: number) => {
+    setScenes((prev) => {
+      const filtered = prev.filter((scene) => scene.sceneNumber !== sceneNumber);
+      return filtered.map((scene, index) => ({ ...scene, sceneNumber: index + 1 }));
+    });
+  };
+
+  const renderVideo = async () => {
+    if (scenes.length === 0) {
+      toast.error("Add at least one scene.");
+      return;
+    }
+
+    setRenderLoading(true);
+    try {
+      const response = await fetchJson<RenderVideoResponse>("/api/media/video/render", {
+        method: "POST",
+        body: JSON.stringify({
+          videoId: result?.id,
+          scenes,
+          aspectRatio,
+          quality,
+          includeSubtitles,
+          voice,
+          speed,
+          musicTrack,
+          voiceVolume,
+          musicVolume,
+        }),
+      });
+
+      setRenderedUrl(response.outputUrl);
+      toast.success("Video rendered successfully.");
+      await refreshAll();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Video rendering failed.");
+    } finally {
+      setRenderLoading(false);
     }
   };
 
@@ -463,6 +623,128 @@ export function VideoStudioClient() {
                 className="w-full rounded-lg border border-white/20 px-3 py-2 text-sm hover:bg-white/10"
               >
                 Copy Output
+              </button>
+
+              {renderedUrl ? (
+                <div className="space-y-2 rounded-xl border border-emerald-300/20 bg-emerald-500/10 p-3">
+                  <p className="text-xs text-emerald-100">Rendered MP4 is ready.</p>
+                  <video controls className="w-full rounded-lg" src={renderedUrl} />
+                  <a className="block rounded-lg border border-emerald-300/30 px-3 py-2 text-center text-sm text-emerald-100 hover:bg-emerald-500/20" href={renderedUrl} target="_blank" rel="noreferrer">
+                    Open / Download MP4
+                  </a>
+                </div>
+              ) : null}
+            </div>
+
+            <div className="space-y-3 rounded-2xl border border-white/10 bg-white/5 p-4 md:col-span-2">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold">Scene Timeline</h2>
+                <button onClick={addScene} className="rounded-lg border border-white/20 px-3 py-1.5 text-xs hover:bg-white/10">Add Scene</button>
+              </div>
+
+              <div className="space-y-3">
+                {scenes.map((scene) => (
+                  <div key={scene.sceneNumber} className="rounded-xl border border-white/10 bg-slate-950/40 p-3">
+                    <div className="mb-2 flex items-center justify-between">
+                      <p className="text-sm font-semibold">Scene {scene.sceneNumber}</p>
+                      <button
+                        onClick={() => removeScene(scene.sceneNumber)}
+                        className="rounded border border-rose-300/30 px-2 py-1 text-xs text-rose-200 hover:bg-rose-500/10"
+                        disabled={scenes.length === 1}
+                      >
+                        Remove
+                      </button>
+                    </div>
+
+                    <div className="grid gap-2 md:grid-cols-3">
+                      <input
+                        value={scene.caption}
+                        onChange={(event) => updateScene(scene.sceneNumber, { caption: event.target.value })}
+                        placeholder="Caption"
+                        className="rounded-lg border border-white/15 bg-slate-900/70 px-3 py-2 text-sm outline-none"
+                      />
+                      <input
+                        value={scene.image}
+                        onChange={(event) => updateScene(scene.sceneNumber, { image: event.target.value })}
+                        placeholder="Image URL or local path"
+                        className="rounded-lg border border-white/15 bg-slate-900/70 px-3 py-2 text-sm outline-none"
+                      />
+                      <input
+                        type="number"
+                        min={1}
+                        max={60}
+                        value={scene.duration}
+                        onChange={(event) => updateScene(scene.sceneNumber, { duration: Number(event.target.value) || 6 })}
+                        placeholder="Duration"
+                        className="rounded-lg border border-white/15 bg-slate-900/70 px-3 py-2 text-sm outline-none"
+                      />
+                    </div>
+
+                    <textarea
+                      value={scene.voiceover}
+                      onChange={(event) => updateScene(scene.sceneNumber, { voiceover: event.target.value })}
+                      rows={2}
+                      placeholder="Voiceover"
+                      className="mt-2 w-full rounded-lg border border-white/15 bg-slate-900/70 px-3 py-2 text-sm outline-none"
+                    />
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-3">
+                <div className="rounded-xl border border-white/10 bg-slate-950/40 p-3">
+                  <p className="text-sm font-semibold">Background Music</p>
+                  <div className="mt-2 space-y-2 text-sm text-slate-200">
+                    {(["none", "corporate", "ambient", "motivational", "upbeat"] as VideoMusicTrack[]).map((track) => (
+                      <label key={track} className="flex items-center gap-2">
+                        <input type="radio" checked={musicTrack === track} onChange={() => setMusicTrack(track)} />
+                        <span className="capitalize">{track}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-white/10 bg-slate-950/40 p-3">
+                  <p className="text-sm font-semibold">Audio Mix</p>
+                  <label className="mt-2 block text-xs text-slate-400">Voice volume ({voiceVolume}%)</label>
+                  <input type="range" min={0} max={100} value={voiceVolume} onChange={(event) => setVoiceVolume(Number(event.target.value))} className="w-full" />
+                  <label className="mt-2 block text-xs text-slate-400">Music volume ({musicVolume}%)</label>
+                  <input type="range" min={0} max={100} value={musicVolume} onChange={(event) => setMusicVolume(Number(event.target.value))} className="w-full" />
+                </div>
+
+                <div className="rounded-xl border border-white/10 bg-slate-950/40 p-3">
+                  <p className="text-sm font-semibold">Export</p>
+                  <div className="mt-2 grid gap-2 text-sm">
+                    <select value={quality} onChange={(event) => setQuality(event.target.value as "1080p" | "720p")} className="rounded border border-white/15 bg-slate-900/70 px-2 py-1.5">
+                      <option value="1080p">1080p</option>
+                      <option value="720p">720p</option>
+                    </select>
+                    <select value={aspectRatio} onChange={(event) => setAspectRatio(event.target.value as VideoAspectRatio)} className="rounded border border-white/15 bg-slate-900/70 px-2 py-1.5">
+                      <option value="16:9">Landscape (16:9)</option>
+                      <option value="9:16">Portrait (9:16)</option>
+                      <option value="1:1">Square (1:1)</option>
+                    </select>
+                    <select value={voice} onChange={(event) => setVoice(event.target.value as VoiceType)} className="rounded border border-white/15 bg-slate-900/70 px-2 py-1.5">
+                      <option value="alloy">alloy</option>
+                      <option value="ash">ash</option>
+                      <option value="ballad">ballad</option>
+                      <option value="coral">coral</option>
+                      <option value="echo">echo</option>
+                      <option value="sage">sage</option>
+                      <option value="shimmer">shimmer</option>
+                    </select>
+                    <input type="number" min={0.5} max={2} step={0.1} value={speed} onChange={(event) => setSpeed(Number(event.target.value) || 1)} className="rounded border border-white/15 bg-slate-900/70 px-2 py-1.5" />
+                    <label className="flex items-center gap-2 text-xs text-slate-300"><input type="checkbox" checked={includeSubtitles} onChange={(event) => setIncludeSubtitles(event.target.checked)} /> Burn subtitles</label>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={() => void renderVideo()}
+                disabled={renderLoading}
+                className="w-full rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 px-4 py-2 font-semibold text-white disabled:opacity-60"
+              >
+                {renderLoading ? "Rendering Video..." : "Generate Video"}
               </button>
             </div>
           </div>

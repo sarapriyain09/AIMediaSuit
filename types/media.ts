@@ -261,6 +261,31 @@ export const videoAspectRatioList = ["16:9", "9:16", "1:1"] as const;
 export type VideoStyle = (typeof videoStyleList)[number];
 export type VideoAspectRatio = (typeof videoAspectRatioList)[number];
 
+export type VideoMusicTrack = "none" | "corporate" | "motivational" | "ambient" | "upbeat";
+export type VideoTransition = "cut" | "fade";
+
+export interface VideoSceneItem {
+  sceneNumber: number;
+  duration: number;
+  caption: string;
+  voiceover: string;
+  image: string;
+  transition: VideoTransition;
+}
+
+export interface RenderVideoPayload {
+  videoId?: string;
+  scenes: VideoSceneItem[];
+  aspectRatio: VideoAspectRatio;
+  quality: "1080p" | "720p";
+  voice: VoiceType;
+  speed: number;
+  includeSubtitles: boolean;
+  musicTrack: VideoMusicTrack;
+  voiceVolume: number;
+  musicVolume: number;
+}
+
 export interface GenerateVideoPayload {
   title?: string;
   topic: string;

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
 import { resolveUserId } from "@/lib/auth/user-id";
+import { deleteVideoByPublicUrl } from "@/lib/storage/video-storage";
 
 export const runtime = "nodejs";
 
@@ -24,6 +25,15 @@ export async function DELETE(request: NextRequest, { params }: Params) {
 
     if (!found) {
       return NextResponse.json({ error: "Video plan not found." }, { status: 404 });
+    }
+
+    const existing = await prisma.videoGeneration.findFirst({
+      where: { id, userId },
+      select: { outputUrl: true },
+    });
+
+    if (existing?.outputUrl) {
+      await deleteVideoByPublicUrl(existing.outputUrl).catch(() => undefined);
     }
 
     await prisma.videoGeneration.delete({ where: { id } });
