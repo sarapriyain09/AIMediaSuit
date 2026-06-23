@@ -56,6 +56,7 @@ export interface ScriptHistoryItem {
   prompt: string;
   outputText: string;
   callToAction: string | null;
+  isFavorite: boolean;
   status: GenerationStatus;
   createdAt: string;
 }

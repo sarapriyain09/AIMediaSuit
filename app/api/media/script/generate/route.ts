@@ -120,6 +120,7 @@ export async function POST(request: NextRequest) {
           generatedAt: created.createdAt.toISOString(),
           createdAt: created.createdAt.toISOString(),
           status: created.status,
+          isFavorite: created.isFavorite,
           meta: {
             goal: created.goal,
             tone: created.tone,
@@ -142,6 +143,7 @@ export async function POST(request: NextRequest) {
       generatedAt: new Date().toISOString(),
       createdAt: new Date().toISOString(),
       status: "COMPLETED",
+      isFavorite: false,
       meta: {
         goal: input.goal,
         tone: input.tone,

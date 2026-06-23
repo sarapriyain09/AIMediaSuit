@@ -21,6 +21,10 @@ Phase 1 implements Voice Studio and keeps the architecture ready for future modu
 	- Database persistence for generated scripts
 	- Script delete and statistics APIs
 	- PDF export (jsPDF + jspdf-autotable)
+- Script Studio (Phase 3)
+	- Favorite and duplicate actions for scripts
+	- Drag-and-drop template ordering (dnd-kit)
+	- Handoff to Voice Studio with script prefill
 
 ## Future Modules
 

@@ -1,8 +1,26 @@
 "use client";
 
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import autoTable from "jspdf-autotable";
 import jsPDF from "jspdf";
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { format } from "date-fns";
 import type { ScriptGoal, ScriptHistoryItem, ScriptLength, ScriptStatistics, ScriptTone } from "@/types/media";
@@ -17,6 +35,7 @@ type GenerateScriptResponse = {
   outputText: string;
   createdAt: string;
   status: "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
+  isFavorite: boolean;
   generatedAt: string;
   meta: {
     goal: ScriptGoal;
@@ -89,6 +108,7 @@ async function fetchJson<T>(url: string, options?: RequestInit) {
 }
 
 export function ScriptStudioClient() {
+  const router = useRouter();
   const [title, setTitle] = useState("");
   const [goal, setGoal] = useState<ScriptGoal>("social");
   const [tone, setTone] = useState<ScriptTone>("professional");
@@ -102,11 +122,19 @@ export function ScriptStudioClient() {
   const [result, setResult] = useState<GenerateScriptResponse | null>(null);
   const [editableScript, setEditableScript] = useState("");
   const [history, setHistory] = useState<ScriptHistoryItem[]>([]);
+  const [templateItems, setTemplateItems] = useState<ScriptTemplate[]>(templates);
   const [stats, setStats] = useState<ScriptStatistics>({
     totalScriptsGenerated: 0,
     mostUsedGoal: "N/A",
     recentScripts: 0,
   });
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
 
   const refreshAll = async () => {
     const [newHistory, newStats] = await Promise.all([
@@ -121,13 +149,13 @@ export function ScriptStudioClient() {
   const filteredTemplates = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) {
-      return templates;
+      return templateItems;
     }
 
-    return templates.filter((item) => {
+    return templateItems.filter((item) => {
       return item.title.toLowerCase().includes(q) || item.goal.toLowerCase().includes(q) || item.prompt.toLowerCase().includes(q);
     });
-  }, [search]);
+  }, [search, templateItems]);
 
   const charsUsed = prompt.length;
 
@@ -196,6 +224,20 @@ export function ScriptStudioClient() {
     toast.success("PDF exported");
   };
 
+  const handoffToVoiceStudio = () => {
+    if (!editableScript.trim()) {
+      toast.error("Generate a script first.");
+      return;
+    }
+
+    const params = new URLSearchParams({
+      prefill: editableScript,
+      title: title || result?.title || "Script Voiceover",
+    });
+
+    router.push(`/dashboard/voice-studio?${params.toString()}`);
+  };
+
   const applyTemplate = (template: ScriptTemplate) => {
     setTitle(template.title);
     setGoal(template.goal);
@@ -216,6 +258,45 @@ export function ScriptStudioClient() {
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Delete failed.");
     }
+  };
+
+  const duplicateScript = async (id: string) => {
+    try {
+      await fetchJson<{ id: string }>(`/api/media/script/${id}`, {
+        method: "POST",
+        body: JSON.stringify({ action: "duplicate" }),
+      });
+      await refreshAll();
+      toast.success("Script duplicated.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Duplicate failed.");
+    }
+  };
+
+  const toggleFavorite = async (item: ScriptHistoryItem) => {
+    try {
+      await fetchJson<{ id: string; isFavorite: boolean }>(`/api/media/script/${item.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ isFavorite: !item.isFavorite }),
+      });
+      await refreshAll();
+      toast.success(item.isFavorite ? "Removed from favorites." : "Marked as favorite.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Update failed.");
+    }
+  };
+
+  const onDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) {
+      return;
+    }
+
+    setTemplateItems((items) => {
+      const oldIndex = items.findIndex((item) => item.id === active.id);
+      const newIndex = items.findIndex((item) => item.id === over.id);
+      return arrayMove(items, oldIndex, newIndex);
+    });
   };
 
   const loadFromHistory = (item: ScriptHistoryItem) => {
@@ -299,7 +380,14 @@ export function ScriptStudioClient() {
               <p className="text-sm text-blue-100/70">Generate high-converting scripts for social, sales, and campaigns</p>
             </div>
           </div>
-          <button className="rounded-lg border border-white/20 px-4 py-2 text-sm text-slate-200 hover:bg-white/10" onClick={exportPdf}>Export PDF</button>
+          <div className="flex items-center gap-2">
+            <button className="rounded-lg border border-white/20 px-4 py-2 text-sm text-slate-200 hover:bg-white/10" onClick={handoffToVoiceStudio}>
+              Send To Voice Studio
+            </button>
+            <button className="rounded-lg border border-white/20 px-4 py-2 text-sm text-slate-200 hover:bg-white/10" onClick={exportPdf}>
+              Export PDF
+            </button>
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-2 px-5 py-3 text-sm">
@@ -429,12 +517,13 @@ export function ScriptStudioClient() {
             </div>
 
             <div className="space-y-2">
-              {filteredTemplates.map((item) => (
-                <button key={item.id} className="w-full rounded-xl border border-white/10 bg-[#071633] px-3 py-2 text-left hover:bg-[#0b1d42]" onClick={() => applyTemplate(item)}>
-                  <p className="text-sm font-semibold text-white">{item.title}</p>
-                  <p className="text-xs text-slate-400">{item.goal} • {item.tone} • {item.length}</p>
-                </button>
-              ))}
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+                <SortableContext items={filteredTemplates.map((item) => item.id)} strategy={verticalListSortingStrategy}>
+                  {filteredTemplates.map((item) => (
+                    <TemplateSortableCard key={item.id} item={item} onUse={applyTemplate} />
+                  ))}
+                </SortableContext>
+              </DndContext>
               {filteredTemplates.length === 0 ? <p className="text-sm text-slate-400">No templates found.</p> : null}
             </div>
           </article>
@@ -485,6 +574,15 @@ export function ScriptStudioClient() {
                 Download TXT
               </button>
             </div>
+
+            {result ? (
+              <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-400">
+                <span className="rounded-full border border-white/15 bg-[#071633] px-2 py-1">{result.meta.goal}</span>
+                <span className="rounded-full border border-white/15 bg-[#071633] px-2 py-1">{result.meta.tone}</span>
+                <span className="rounded-full border border-white/15 bg-[#071633] px-2 py-1">{result.meta.length}</span>
+                {result.isFavorite ? <span className="rounded-full border border-amber-300/30 bg-amber-500/10 px-2 py-1 text-amber-200">Favorite</span> : null}
+              </div>
+            ) : null}
           </article>
         </div>
       </section>
@@ -554,11 +652,18 @@ export function ScriptStudioClient() {
                     <p className="truncate text-sm font-medium text-slate-100">{item.title}</p>
                     <p className="text-xs text-slate-400 capitalize">{item.goal} • {item.tone} • {item.length}</p>
                     <p className="text-xs text-slate-500">{format(new Date(item.createdAt), "MMM d, h:mm a")}</p>
+                    {item.isFavorite ? <p className="text-xs text-amber-200">★ Favorite</p> : null}
                   </div>
                   <p className="text-xs text-slate-400">{item.status}</p>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button className="rounded-lg border border-amber-400/30 bg-amber-500/10 px-3 py-1.5 text-sm text-amber-200 hover:bg-amber-500/20" onClick={() => void toggleFavorite(item)}>
+                      {item.isFavorite ? "Unfavorite" : "Favorite"}
+                    </button>
                     <button className="rounded-lg border border-white/15 bg-[#0a1d40] px-3 py-1.5 text-sm text-slate-100 hover:bg-[#102852]" onClick={() => loadFromHistory(item)}>
                       Load
+                    </button>
+                    <button className="rounded-lg border border-white/15 bg-[#0a1d40] px-3 py-1.5 text-sm text-slate-100 hover:bg-[#102852]" onClick={() => void duplicateScript(item.id)}>
+                      Duplicate
                     </button>
                     <button className="rounded-lg border border-rose-400/30 bg-rose-500/10 px-3 py-1.5 text-sm text-rose-300 hover:bg-rose-500/20" onClick={() => void removeScript(item.id)}>
                       Delete
@@ -585,6 +690,37 @@ function StatCard({ label, value }: { label: string; value: string }) {
     <div className="panel animate-float-in rounded-2xl bg-gradient-to-r from-[#081733] to-[#0a1d40] p-4">
       <p className="text-[11px] uppercase tracking-[0.13em] text-blue-100/70">{label}</p>
       <p className="display-font mt-2 text-3xl font-semibold text-white">{value}</p>
+    </div>
+  );
+}
+
+function TemplateSortableCard({
+  item,
+  onUse,
+}: {
+  item: ScriptTemplate;
+  onUse: (template: ScriptTemplate) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: item.id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className="flex items-center gap-2 rounded-xl border border-white/10 bg-[#071633] px-2 py-2">
+      <button
+        className="cursor-grab rounded-lg border border-white/15 px-2 py-2 text-xs text-slate-300 active:cursor-grabbing"
+        {...attributes}
+        {...listeners}
+        aria-label="Drag template"
+      >
+        ☰
+      </button>
+      <button className="w-full text-left" onClick={() => onUse(item)}>
+        <p className="text-sm font-semibold text-white">{item.title}</p>
+        <p className="text-xs text-slate-400">{item.goal} • {item.tone} • {item.length}</p>
+      </button>
     </div>
   );
 }

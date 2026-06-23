@@ -82,6 +82,7 @@ model ScriptGeneration {
   length       ScriptLength
   audience     String
   callToAction String?
+  isFavorite   Boolean          @default(false)
   status       GenerationStatus @default(COMPLETED)
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt

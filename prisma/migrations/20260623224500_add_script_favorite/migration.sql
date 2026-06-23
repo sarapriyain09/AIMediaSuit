@@ -1,0 +1,2 @@
+ALTER TABLE "ScriptGeneration"
+ADD COLUMN IF NOT EXISTS "isFavorite" BOOLEAN NOT NULL DEFAULT false;

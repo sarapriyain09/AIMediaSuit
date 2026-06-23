@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { format } from "date-fns";
 import type { VoiceHistoryItem, VoiceStatistics } from "@/types/media";
@@ -79,6 +80,7 @@ async function fetchJson<T>(url: string, options?: RequestInit) {
 }
 
 export function VoiceStudioClient({ initialHistory, initialStats }: Props) {
+  const searchParams = useSearchParams();
   const [title, setTitle] = useState("");
   const [inputText, setInputText] = useState("");
   const [voice, setVoice] = useState<(typeof voiceList)[number]>("alloy");
@@ -89,6 +91,7 @@ export function VoiceStudioClient({ initialHistory, initialStats }: Props) {
   const [activeUrl, setActiveUrl] = useState<string | null>(initialHistory[0]?.outputUrl ?? null);
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState<StudioTab>("create");
+  const hasAppliedPrefill = useRef(false);
 
   const charsUsed = inputText.length;
   const speedLabel = useMemo(() => `${speed.toFixed(1)}x`, [speed]);
@@ -198,6 +201,25 @@ export function VoiceStudioClient({ initialHistory, initialStats }: Props) {
       toast.error(error instanceof Error ? error.message : "Delete failed.");
     }
   };
+
+  useEffect(() => {
+    if (hasAppliedPrefill.current) {
+      return;
+    }
+
+    const prefill = searchParams.get("prefill");
+    const prefillTitle = searchParams.get("title");
+    if (!prefill) {
+      return;
+    }
+
+    setInputText(prefill);
+    if (prefillTitle) {
+      setTitle(prefillTitle);
+    }
+    setActiveTab("create");
+    hasAppliedPrefill.current = true;
+  }, [searchParams]);
 
   return (
     <div className="space-y-4 text-slate-100">

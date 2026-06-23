@@ -28,6 +28,7 @@ export async function GET(request: NextRequest) {
         prompt: row.prompt,
         outputText: row.outputText,
         callToAction: row.callToAction,
+        isFavorite: row.isFavorite,
         status: row.status,
         createdAt: row.createdAt.toISOString(),
       })),
