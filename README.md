@@ -2,9 +2,24 @@
 
 AI Media Suite is a standalone module in the Velynxia Growth Platform.
 
-Phase 1 implements Voice Studio and keeps the architecture ready for future modules.
+Voice, Script, Presentation, and Podcast modules are implemented. Avatar Studio is the next active build target.
 
-## Implemented Module
+## Studio Build Order
+
+1. ✅ Voice Studio
+2. ✅ Script Studio
+3. ✅ Presentation Studio
+4. ✅ Podcast Studio
+5. ✅ Subtitle Studio
+6. ✅ Background Music Studio
+7. ✅ Video Studio
+8. ✅ Avatar Studio
+
+## Current Build Focus
+
+- Avatar Studio (Studio 8) is the next module to build.
+
+## Implemented Modules
 
 - Voice Studio (MVP)
 	- Create
@@ -26,15 +41,21 @@ Phase 1 implements Voice Studio and keeps the architecture ready for future modu
 	- Favorites filter in History
 	- Drag-and-drop template ordering (dnd-kit)
 	- Handoff to Voice Studio with script prefill
+- Presentation Studio (Phase 1)
+	- Deck input controls (goal, tone, length, audience, topic)
+	- Template presets
+	- AI slide/deck generation
+	- My Decks, Templates, History, Favorites, Duplicate, Delete
+	- Editable output with copy/download
+- Podcast Studio (Phase 1 + Phase 2 beta)
+	- Episode planning and script generation
+	- Templates, history, favorites, duplicate, delete
+	- Multi-speaker segment generation
+	- Segment audio + stitched episode output (beta)
 
 ## Future Modules
 
-- Script Studio
-- Podcast Studio
-- Video Studio
 - Avatar Studio
-- Subtitle Studio
-- Background Music Studio
 
 ## Tech Stack
 
@@ -126,14 +147,32 @@ Deployment:
 - GET /api/media/script/history
 - DELETE /api/media/script/[id]
 - GET /api/media/script/statistics
+- PATCH /api/media/script/[id]
+- POST /api/media/script/[id]
+- POST /api/media/podcast/generate
+- GET /api/media/podcast/history
+- DELETE /api/media/podcast/[id]
+- PATCH /api/media/podcast/[id]
+- POST /api/media/podcast/[id]
+- GET /api/media/podcast/statistics
+- POST /api/media/presentation/generate
+- GET /api/media/presentation/history
+- DELETE /api/media/presentation/[id]
+- PATCH /api/media/presentation/[id]
+- POST /api/media/presentation/[id]
+- GET /api/media/presentation/statistics
 
 ## Project Layout
 
 - app/dashboard/voice-studio: Voice Studio page
 - app/dashboard/script-studio: Script Studio page
-- app/dashboard/podcast-studio: Coming soon page
+- app/dashboard/presentation-studio: Presentation Studio page
+- app/dashboard/podcast-studio: Podcast Studio page
 - app/dashboard/video-studio: Coming soon page
 - app/api/media/voice: Voice API handlers
+- app/api/media/script: Script API handlers
+- app/api/media/presentation: Presentation API handlers
+- app/api/media/podcast: Podcast API handlers
 - app/media/audio/[...path]: Local audio file serving route
 - components/layout: Dashboard shell components
 - components/voice-studio: Voice Studio UI client component

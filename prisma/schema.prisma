@@ -74,6 +74,27 @@ enum PodcastLength {
   long
 }
 
+enum PresentationGoal {
+  pitch
+  training
+  webinar
+  sales
+  report
+}
+
+enum PresentationTone {
+  professional
+  persuasive
+  educational
+  storytelling
+}
+
+enum PresentationLength {
+  short
+  medium
+  long
+}
+
 model MediaGeneration {
   id         String           @id @default(uuid()) @db.Uuid
   userId     String           @db.Uuid
@@ -131,6 +152,27 @@ model PodcastGeneration {
   status     GenerationStatus @default(COMPLETED)
   createdAt  DateTime         @default(now())
   updatedAt  DateTime         @updatedAt
+
+  @@index([userId, createdAt])
+}
+
+model PresentationGeneration {
+  id                 String             @id @default(uuid()) @db.Uuid
+  userId             String             @db.Uuid
+  title              String
+  goal               PresentationGoal
+  tone               PresentationTone
+  length             PresentationLength
+  audience           String
+  topic              String
+  prompt             String
+  outputText         String
+  slideCount         Int                @default(0)
+  includeSpeakerNotes Boolean           @default(true)
+  isFavorite         Boolean            @default(false)
+  status             GenerationStatus   @default(COMPLETED)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
 
   @@index([userId, createdAt])
 }

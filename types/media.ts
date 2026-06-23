@@ -122,3 +122,45 @@ export interface PodcastStatistics {
   mostUsedFormat: string;
   recentEpisodes: number;
 }
+
+export const presentationGoalList = ["pitch", "training", "webinar", "sales", "report"] as const;
+export const presentationToneList = ["professional", "persuasive", "educational", "storytelling"] as const;
+export const presentationLengthList = ["short", "medium", "long"] as const;
+
+export type PresentationGoal = (typeof presentationGoalList)[number];
+export type PresentationTone = (typeof presentationToneList)[number];
+export type PresentationLength = (typeof presentationLengthList)[number];
+
+export interface GeneratePresentationPayload {
+  title?: string;
+  goal: PresentationGoal;
+  tone: PresentationTone;
+  length: PresentationLength;
+  audience: string;
+  topic: string;
+  prompt: string;
+  includeSpeakerNotes?: boolean;
+}
+
+export interface PresentationHistoryItem {
+  id: string;
+  title: string;
+  goal: PresentationGoal;
+  tone: PresentationTone;
+  length: PresentationLength;
+  audience: string;
+  topic: string;
+  prompt: string;
+  outputText: string;
+  slideCount: number;
+  includeSpeakerNotes: boolean;
+  isFavorite: boolean;
+  status: GenerationStatus;
+  createdAt: string;
+}
+
+export interface PresentationStatistics {
+  totalDecksGenerated: number;
+  mostUsedGoal: string;
+  recentDecks: number;
+}
