@@ -1,0 +1,330 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import toast from "react-hot-toast";
+import { format } from "date-fns";
+
+type ScriptGoal = "social" | "ad" | "youtube" | "email" | "sales";
+type ScriptTone = "professional" | "friendly" | "bold" | "educational" | "storytelling";
+type ScriptLength = "short" | "medium" | "long";
+
+type GenerateScriptResponse = {
+  title: string;
+  script: string;
+  generatedAt: string;
+  meta: {
+    goal: ScriptGoal;
+    tone: ScriptTone;
+    length: ScriptLength;
+  };
+};
+
+type ScriptTemplate = {
+  id: string;
+  title: string;
+  goal: ScriptGoal;
+  tone: ScriptTone;
+  length: ScriptLength;
+  audience: string;
+  prompt: string;
+  callToAction: string;
+};
+
+const templates: ScriptTemplate[] = [
+  {
+    id: "social-launch",
+    title: "Social Product Launch",
+    goal: "social",
+    tone: "bold",
+    length: "short",
+    audience: "startup founders",
+    prompt: "Announce our AI tool launch and highlight speed and quality improvements.",
+    callToAction: "Try it free today",
+  },
+  {
+    id: "sales-outreach",
+    title: "Sales Outreach",
+    goal: "sales",
+    tone: "professional",
+    length: "medium",
+    audience: "SaaS decision makers",
+    prompt: "Write a script that positions our platform as a workflow accelerator with measurable ROI.",
+    callToAction: "Book a 15-minute demo",
+  },
+  {
+    id: "youtube-intro",
+    title: "YouTube Intro",
+    goal: "youtube",
+    tone: "friendly",
+    length: "medium",
+    audience: "small business owners",
+    prompt: "Create an engaging intro script about improving content output with AI automation.",
+    callToAction: "Subscribe for weekly playbooks",
+  },
+];
+
+async function fetchJson<T>(url: string, options?: RequestInit) {
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...(options?.headers ?? {}),
+    },
+  });
+
+  if (!response.ok) {
+    const err = (await response.json().catch(() => ({ error: "Request failed" }))) as { error?: string };
+    throw new Error(err.error ?? "Request failed");
+  }
+
+  return (await response.json()) as T;
+}
+
+export function ScriptStudioClient() {
+  const [title, setTitle] = useState("");
+  const [goal, setGoal] = useState<ScriptGoal>("social");
+  const [tone, setTone] = useState<ScriptTone>("professional");
+  const [length, setLength] = useState<ScriptLength>("medium");
+  const [audience, setAudience] = useState("");
+  const [prompt, setPrompt] = useState("");
+  const [callToAction, setCallToAction] = useState("");
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<GenerateScriptResponse | null>(null);
+  const [editableScript, setEditableScript] = useState("");
+
+  const filteredTemplates = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) {
+      return templates;
+    }
+
+    return templates.filter((item) => {
+      return item.title.toLowerCase().includes(q) || item.goal.toLowerCase().includes(q) || item.prompt.toLowerCase().includes(q);
+    });
+  }, [search]);
+
+  const charsUsed = prompt.length;
+
+  const applyTemplate = (template: ScriptTemplate) => {
+    setTitle(template.title);
+    setGoal(template.goal);
+    setTone(template.tone);
+    setLength(template.length);
+    setAudience(template.audience);
+    setPrompt(template.prompt);
+    setCallToAction(template.callToAction);
+    toast.success("Template loaded.");
+  };
+
+  const generate = async () => {
+    if (!prompt.trim()) {
+      toast.error("Enter your script prompt.");
+      return;
+    }
+
+    if (!audience.trim()) {
+      toast.error("Enter your target audience.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const generated = await fetchJson<GenerateScriptResponse>("/api/media/script/generate", {
+        method: "POST",
+        body: JSON.stringify({
+          title,
+          goal,
+          tone,
+          length,
+          audience,
+          prompt,
+          callToAction,
+        }),
+      });
+
+      setResult(generated);
+      setEditableScript(generated.script);
+      toast.success("Script generated successfully.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to generate script.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4 text-slate-100">
+      <section className="panel animate-float-in overflow-hidden rounded-3xl">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-5 py-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 text-xl">✍</div>
+            <div>
+              <h1 className="display-font text-3xl font-semibold text-white">Script Studio</h1>
+              <p className="text-sm text-blue-100/70">Generate high-converting scripts for social, sales, and campaigns</p>
+            </div>
+          </div>
+          <button className="rounded-lg border border-white/20 px-4 py-2 text-sm text-slate-200 hover:bg-white/10">Export PDF</button>
+        </div>
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-[1fr_1.1fr]">
+        <article className="panel animate-float-in rounded-2xl p-4">
+          <div className="mb-3 flex items-center gap-2">
+            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-500 text-xs font-semibold">1</span>
+            <h2 className="text-lg font-semibold text-white">Script Inputs</h2>
+          </div>
+
+          <label className="text-sm text-blue-100/75">Title (Optional)</label>
+          <input
+            className="mt-2 w-full rounded-xl border border-white/15 bg-[#05122a] px-3 py-2 text-sm text-slate-100 outline-none placeholder:text-slate-500"
+            placeholder="Campaign Script"
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+            maxLength={120}
+          />
+
+          <div className="mt-3 grid gap-3 md:grid-cols-3">
+            <div>
+              <label className="text-sm text-blue-100/75">Goal</label>
+              <select className="mt-2 w-full rounded-lg border border-white/15 bg-[#050f26] px-3 py-2 text-sm text-slate-100 outline-none" value={goal} onChange={(event) => setGoal(event.target.value as ScriptGoal)}>
+                <option value="social">Social</option>
+                <option value="ad">Ad</option>
+                <option value="youtube">YouTube</option>
+                <option value="email">Email</option>
+                <option value="sales">Sales</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-sm text-blue-100/75">Tone</label>
+              <select className="mt-2 w-full rounded-lg border border-white/15 bg-[#050f26] px-3 py-2 text-sm text-slate-100 outline-none" value={tone} onChange={(event) => setTone(event.target.value as ScriptTone)}>
+                <option value="professional">Professional</option>
+                <option value="friendly">Friendly</option>
+                <option value="bold">Bold</option>
+                <option value="educational">Educational</option>
+                <option value="storytelling">Storytelling</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-sm text-blue-100/75">Length</label>
+              <select className="mt-2 w-full rounded-lg border border-white/15 bg-[#050f26] px-3 py-2 text-sm text-slate-100 outline-none" value={length} onChange={(event) => setLength(event.target.value as ScriptLength)}>
+                <option value="short">Short</option>
+                <option value="medium">Medium</option>
+                <option value="long">Long</option>
+              </select>
+            </div>
+          </div>
+
+          <label className="mt-3 block text-sm text-blue-100/75">Target Audience</label>
+          <input
+            className="mt-2 w-full rounded-xl border border-white/15 bg-[#05122a] px-3 py-2 text-sm text-slate-100 outline-none placeholder:text-slate-500"
+            placeholder="Ecommerce founders in US"
+            value={audience}
+            onChange={(event) => setAudience(event.target.value)}
+            maxLength={140}
+          />
+
+          <label className="mt-3 block text-sm text-blue-100/75">Prompt</label>
+          <textarea
+            className="mt-2 min-h-44 w-full rounded-xl border border-white/15 bg-[#05122a] px-3 py-3 text-sm text-slate-100 outline-none placeholder:text-slate-500"
+            placeholder="Describe what this script should communicate..."
+            maxLength={4000}
+            value={prompt}
+            onChange={(event) => setPrompt(event.target.value)}
+          />
+          <div className="mt-2 text-xs text-slate-400">{charsUsed} / 4000 characters</div>
+
+          <label className="mt-3 block text-sm text-blue-100/75">Call To Action (Optional)</label>
+          <input
+            className="mt-2 w-full rounded-xl border border-white/15 bg-[#05122a] px-3 py-2 text-sm text-slate-100 outline-none placeholder:text-slate-500"
+            placeholder="Book a demo"
+            value={callToAction}
+            onChange={(event) => setCallToAction(event.target.value)}
+            maxLength={160}
+          />
+
+          <button
+            className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-500 to-violet-500 px-4 py-3 text-base font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+            onClick={generate}
+            disabled={loading}
+          >
+            {loading ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" /> : null}
+            {loading ? "Generating..." : "Generate Script"}
+          </button>
+        </article>
+
+        <div className="space-y-4">
+          <article className="panel animate-float-in rounded-2xl p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-white">Templates</h2>
+              <input
+                className="w-full max-w-48 rounded-lg border border-white/15 bg-[#06132d] px-3 py-1.5 text-xs text-slate-100 placeholder:text-slate-400 outline-none"
+                placeholder="Search templates"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              {filteredTemplates.map((item) => (
+                <button key={item.id} className="w-full rounded-xl border border-white/10 bg-[#071633] px-3 py-2 text-left hover:bg-[#0b1d42]" onClick={() => applyTemplate(item)}>
+                  <p className="text-sm font-semibold text-white">{item.title}</p>
+                  <p className="text-xs text-slate-400">{item.goal} • {item.tone} • {item.length}</p>
+                </button>
+              ))}
+              {filteredTemplates.length === 0 ? <p className="text-sm text-slate-400">No templates found.</p> : null}
+            </div>
+          </article>
+
+          <article className="panel animate-float-in rounded-2xl p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-white">Generated Script</h2>
+              {result ? <p className="text-xs text-slate-400">{format(new Date(result.generatedAt), "MMM d, h:mm a")}</p> : null}
+            </div>
+
+            <textarea
+              className="min-h-64 w-full rounded-xl border border-white/15 bg-[#05122a] px-3 py-3 text-sm text-slate-100 outline-none placeholder:text-slate-500"
+              placeholder="Your generated script will appear here..."
+              value={editableScript}
+              onChange={(event) => setEditableScript(event.target.value)}
+            />
+
+            <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+              <button
+                className="rounded-lg border border-white/15 bg-[#071633] px-3 py-2 text-slate-200 hover:bg-[#0b1d42]"
+                onClick={() => {
+                  if (!editableScript.trim()) {
+                    toast.error("No script to copy.");
+                    return;
+                  }
+                  navigator.clipboard.writeText(editableScript);
+                  toast.success("Script copied");
+                }}
+              >
+                Copy Script
+              </button>
+              <button
+                className="rounded-lg border border-white/15 bg-[#071633] px-3 py-2 text-slate-200 hover:bg-[#0b1d42]"
+                onClick={() => {
+                  if (!editableScript.trim()) {
+                    toast.error("No script to download.");
+                    return;
+                  }
+                  const blob = new Blob([editableScript], { type: "text/plain;charset=utf-8" });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `${(title || "script").replace(/\s+/g, "-").toLowerCase()}.txt`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }}
+              >
+                Download TXT
+              </button>
+            </div>
+          </article>
+        </div>
+      </section>
+    </div>
+  );
+}

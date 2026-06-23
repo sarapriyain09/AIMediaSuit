@@ -11,6 +11,11 @@ Phase 1 implements Voice Studio and keeps the architecture ready for future modu
 	- My Voices
 	- Templates
 	- History
+- Script Studio (Phase 1)
+	- Script input controls (goal, tone, length, audience, CTA)
+	- Template presets
+	- AI script generation
+	- Editable output with copy/download
 
 ## Future Modules
 
@@ -107,11 +112,12 @@ Deployment:
 - GET /api/media/voice/history
 - DELETE /api/media/voice/[id]
 - GET /api/media/voice/statistics
+- POST /api/media/script/generate
 
 ## Project Layout
 
 - app/dashboard/voice-studio: Voice Studio page
-- app/dashboard/script-studio: Coming soon page
+- app/dashboard/script-studio: Script Studio page
 - app/dashboard/podcast-studio: Coming soon page
 - app/dashboard/video-studio: Coming soon page
 - app/api/media/voice: Voice API handlers
