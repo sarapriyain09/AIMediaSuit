@@ -37,7 +37,7 @@ services:
       DATABASE_URL: postgresql://aimedia:${POSTGRES_PASSWORD:-aimedia123}@postgres:5432/aimedia?schema=public
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
-      OpenAI__ApiKey: ${OPENAI_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
       OPENAI_TTS_MODEL: gpt-4o-mini-tts
       VOICE_PROVIDER: openai
       STORAGE_ROOT: /app/storage
