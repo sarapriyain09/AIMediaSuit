@@ -210,3 +210,25 @@ model SubtitleGeneration {
 
   @@index([userId, createdAt])
 }
+
+model VideoGeneration {
+  id               String           @id @default(uuid()) @db.Uuid
+  userId           String           @db.Uuid
+  title            String
+  topic            String
+  audience         String
+  style            String
+  aspectRatio      String
+  durationSec      Int              @default(60)
+  prompt           String
+  outputText       String
+  sceneCount       Int              @default(0)
+  includeVoiceover Boolean          @default(true)
+  outputUrl        String?
+  isFavorite       Boolean          @default(false)
+  status           GenerationStatus @default(COMPLETED)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@index([userId, createdAt])
+}

@@ -10,7 +10,7 @@ const navItems = [
   { href: "/dashboard/presentation-studio", label: "Presentation Studio", available: true },
   { href: "/dashboard/podcast-studio", label: "Podcast Studio", available: true },
   { href: "/dashboard/subtitle-studio", label: "Subtitle Studio", available: true },
-  { href: "/dashboard/video-studio", label: "Video Studio", available: false },
+  { href: "/dashboard/video-studio", label: "Video Studio", available: true },
 ];
 
 export function Sidebar() {
@@ -19,13 +19,13 @@ export function Sidebar() {
   return (
     <aside className="panel animate-float-in rounded-3xl bg-gradient-to-b from-[#061230] to-[#030814] p-4 text-slate-200">
       <div className="mb-5 rounded-2xl border border-white/10 bg-white/5 p-3">
-        <div className="rounded-xl bg-white p-2">
+        <div className="rounded-xl bg-white p-1.5">
           <Image
             src="/velynxia-Logo.png"
             alt="Velynxia"
-            width={360}
-            height={240}
-            className="h-auto w-full object-contain"
+            width={300}
+            height={200}
+            className="mx-auto h-auto w-full max-w-[140px] object-contain"
             priority
           />
         </div>

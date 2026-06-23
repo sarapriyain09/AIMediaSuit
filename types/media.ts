@@ -202,3 +202,44 @@ export interface SubtitleStatistics {
   mostUsedFormat: string;
   recentSubtitles: number;
 }
+
+export const videoStyleList = ["cinematic", "social", "explainer", "product"] as const;
+export const videoAspectRatioList = ["16:9", "9:16", "1:1"] as const;
+
+export type VideoStyle = (typeof videoStyleList)[number];
+export type VideoAspectRatio = (typeof videoAspectRatioList)[number];
+
+export interface GenerateVideoPayload {
+  title?: string;
+  topic: string;
+  audience: string;
+  style: VideoStyle;
+  aspectRatio: VideoAspectRatio;
+  durationSec: number;
+  prompt: string;
+  includeVoiceover?: boolean;
+}
+
+export interface VideoHistoryItem {
+  id: string;
+  title: string;
+  topic: string;
+  audience: string;
+  style: VideoStyle;
+  aspectRatio: VideoAspectRatio;
+  durationSec: number;
+  prompt: string;
+  outputText: string;
+  sceneCount: number;
+  includeVoiceover: boolean;
+  outputUrl: string | null;
+  isFavorite: boolean;
+  status: GenerationStatus;
+  createdAt: string;
+}
+
+export interface VideoStatistics {
+  totalVideosGenerated: number;
+  mostUsedStyle: string;
+  recentVideos: number;
+}

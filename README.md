@@ -58,6 +58,12 @@ Voice, Script, Presentation, Podcast, and Subtitle modules are implemented. Back
 	- AI subtitle generation (SRT/VTT/Captions)
 	- My Subtitles, Templates, History, Favorites, Duplicate, Delete
 	- Editable output with copy/download
+- Video Studio (Phase 1)
+	- Video brief controls (topic, audience, style, ratio, duration)
+	- Template presets
+	- AI storyboard/scene generation
+	- My Videos, Templates, History, Favorites, Duplicate, Delete
+	- Editable output with copy/download
 
 ## Future Modules
 
@@ -138,6 +144,12 @@ Storage:
 - PATCH /api/media/subtitle/[id]
 - POST /api/media/subtitle/[id]
 - GET /api/media/subtitle/statistics
+- POST /api/media/video/generate
+- GET /api/media/video/history
+- DELETE /api/media/video/[id]
+- PATCH /api/media/video/[id]
+- POST /api/media/video/[id]
+- GET /api/media/video/statistics
 
 ## Project Layout
 
@@ -152,10 +164,12 @@ Storage:
 - app/api/media/presentation: Presentation API handlers
 - app/api/media/podcast: Podcast API handlers
 - app/api/media/subtitle: Subtitle API handlers
+- app/api/media/video: Video API handlers
 - app/media/audio/[...path]: Local audio file serving route
 - components/layout: Dashboard shell components
 - components/voice-studio: Voice Studio UI client component
 - components/subtitle-studio: Subtitle Studio UI client component
+- components/video-studio: Video Studio UI client component
 - lib/auth: next-auth config and user resolution
 - lib/db: Prisma client
 - lib/providers: Provider interfaces and provider factory
