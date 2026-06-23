@@ -25,4 +25,4 @@ RUN mkdir -p /app/storage/audio
 COPY --from=builder /app/next.config.ts ./next.config.ts
 
 EXPOSE 3000
-CMD ["sh", "-c", "npx prisma migrate deploy && npm run start"]
+CMD ["sh", "-c", "npx prisma migrate deploy && node .next/standalone/server.js"]
