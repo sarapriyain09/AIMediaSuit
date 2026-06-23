@@ -1,4 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { GenerationStatus, ScriptGoal, ScriptLength, ScriptTone } from "@prisma/client";
+import { randomUUID } from "node:crypto";
+import { prisma } from "@/lib/db/prisma";
+import { resolveUserId } from "@/lib/auth/user-id";
 import { generateScriptSchema } from "@/lib/schemas/script";
 import { jsonError } from "@/lib/utils/api-response";
 
@@ -60,6 +64,8 @@ export async function POST(request: NextRequest) {
 
     const raw = await request.json();
     const input = generateScriptSchema.parse(raw);
+    const userId = await resolveUserId(request);
+    const resolvedTitle = input.title || input.prompt.slice(0, 80);
 
     const prompt = buildPrompt(input);
     const model = process.env.OPENAI_TEXT_MODEL ?? "gpt-4.1-mini";
@@ -88,14 +94,60 @@ export async function POST(request: NextRequest) {
       return jsonError("Script generation returned empty output.", 500);
     }
 
+    if (process.env.DATABASE_URL) {
+      try {
+        const created = await prisma.scriptGeneration.create({
+          data: {
+            userId,
+            title: resolvedTitle,
+            prompt: input.prompt,
+            outputText: script,
+            goal: input.goal as ScriptGoal,
+            tone: input.tone as ScriptTone,
+            length: input.length as ScriptLength,
+            audience: input.audience,
+            callToAction: input.callToAction || null,
+            status: GenerationStatus.COMPLETED,
+          },
+        });
+
+        return NextResponse.json({
+          id: created.id,
+          title: created.title,
+          prompt: created.prompt,
+          script: created.outputText,
+          outputText: created.outputText,
+          generatedAt: created.createdAt.toISOString(),
+          createdAt: created.createdAt.toISOString(),
+          status: created.status,
+          meta: {
+            goal: created.goal,
+            tone: created.tone,
+            length: created.length,
+            audience: created.audience,
+            callToAction: created.callToAction,
+          },
+        });
+      } catch {
+        // Fall back to non-persistent response when DB is unavailable.
+      }
+    }
+
     return NextResponse.json({
-      title: input.title || "Untitled Script",
+      id: randomUUID(),
+      title: resolvedTitle || "Untitled Script",
+      prompt: input.prompt,
       script,
+      outputText: script,
       generatedAt: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+      status: "COMPLETED",
       meta: {
         goal: input.goal,
         tone: input.tone,
         length: input.length,
+        audience: input.audience,
+        callToAction: input.callToAction || null,
       },
     });
   } catch (error) {

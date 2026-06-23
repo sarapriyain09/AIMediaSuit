@@ -16,6 +16,11 @@ Phase 1 implements Voice Studio and keeps the architecture ready for future modu
 	- Template presets
 	- AI script generation
 	- Editable output with copy/download
+- Script Studio (Phase 2)
+	- My Scripts and History tabs
+	- Database persistence for generated scripts
+	- Script delete and statistics APIs
+	- PDF export (jsPDF + jspdf-autotable)
 
 ## Future Modules
 
@@ -113,6 +118,9 @@ Deployment:
 - DELETE /api/media/voice/[id]
 - GET /api/media/voice/statistics
 - POST /api/media/script/generate
+- GET /api/media/script/history
+- DELETE /api/media/script/[id]
+- GET /api/media/script/statistics
 
 ## Project Layout
 
@@ -147,6 +155,22 @@ MediaGenerations table fields:
 - speed
 - duration
 - outputUrl
+- status
+- createdAt
+- updatedAt
+
+ScriptGeneration table fields:
+
+- id (UUID)
+- userId (UUID)
+- title
+- prompt
+- outputText
+- goal
+- tone
+- length
+- audience
+- callToAction
 - status
 - createdAt
 - updatedAt

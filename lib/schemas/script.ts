@@ -1,8 +1,5 @@
 import { z } from "zod";
-
-export const scriptGoalList = ["social", "ad", "youtube", "email", "sales"] as const;
-export const scriptToneList = ["professional", "friendly", "bold", "educational", "storytelling"] as const;
-export const scriptLengthList = ["short", "medium", "long"] as const;
+import { scriptGoalList, scriptLengthList, scriptToneList } from "@/types/media";
 
 export const generateScriptSchema = z.object({
   title: z.string().max(120).optional().default(""),

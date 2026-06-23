@@ -32,6 +32,28 @@ enum VoiceType {
   shimmer
 }
 
+enum ScriptGoal {
+  social
+  ad
+  youtube
+  email
+  sales
+}
+
+enum ScriptTone {
+  professional
+  friendly
+  bold
+  educational
+  storytelling
+}
+
+enum ScriptLength {
+  short
+  medium
+  long
+}
+
 model MediaGeneration {
   id         String           @id @default(uuid()) @db.Uuid
   userId     String           @db.Uuid
@@ -47,4 +69,22 @@ model MediaGeneration {
   updatedAt  DateTime         @updatedAt
 
   @@index([userId, moduleType, createdAt])
+}
+
+model ScriptGeneration {
+  id           String           @id @default(uuid()) @db.Uuid
+  userId       String           @db.Uuid
+  title        String
+  prompt       String
+  outputText   String
+  goal         ScriptGoal
+  tone         ScriptTone
+  length       ScriptLength
+  audience     String
+  callToAction String?
+  status       GenerationStatus @default(COMPLETED)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@index([userId, createdAt])
 }

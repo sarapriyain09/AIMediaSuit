@@ -1,21 +1,29 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import autoTable from "jspdf-autotable";
+import jsPDF from "jspdf";
+import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { format } from "date-fns";
+import type { ScriptGoal, ScriptHistoryItem, ScriptLength, ScriptStatistics, ScriptTone } from "@/types/media";
 
-type ScriptGoal = "social" | "ad" | "youtube" | "email" | "sales";
-type ScriptTone = "professional" | "friendly" | "bold" | "educational" | "storytelling";
-type ScriptLength = "short" | "medium" | "long";
+type StudioTab = "create" | "my-scripts" | "templates" | "history";
 
 type GenerateScriptResponse = {
+  id: string;
   title: string;
+  prompt: string;
   script: string;
+  outputText: string;
+  createdAt: string;
+  status: "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
   generatedAt: string;
   meta: {
     goal: ScriptGoal;
     tone: ScriptTone;
     length: ScriptLength;
+    audience: string;
+    callToAction: string | null;
   };
 };
 
@@ -89,9 +97,26 @@ export function ScriptStudioClient() {
   const [prompt, setPrompt] = useState("");
   const [callToAction, setCallToAction] = useState("");
   const [search, setSearch] = useState("");
+  const [activeTab, setActiveTab] = useState<StudioTab>("create");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<GenerateScriptResponse | null>(null);
   const [editableScript, setEditableScript] = useState("");
+  const [history, setHistory] = useState<ScriptHistoryItem[]>([]);
+  const [stats, setStats] = useState<ScriptStatistics>({
+    totalScriptsGenerated: 0,
+    mostUsedGoal: "N/A",
+    recentScripts: 0,
+  });
+
+  const refreshAll = async () => {
+    const [newHistory, newStats] = await Promise.all([
+      fetchJson<ScriptHistoryItem[]>("/api/media/script/history"),
+      fetchJson<ScriptStatistics>("/api/media/script/statistics"),
+    ]);
+
+    setHistory(newHistory);
+    setStats(newStats);
+  };
 
   const filteredTemplates = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -106,6 +131,71 @@ export function ScriptStudioClient() {
 
   const charsUsed = prompt.length;
 
+  const groupedScripts = useMemo(() => {
+    const counts = new Map<ScriptGoal, number>();
+    history.forEach((item) => counts.set(item.goal, (counts.get(item.goal) ?? 0) + 1));
+
+    return (["social", "ad", "youtube", "email", "sales"] as ScriptGoal[])
+      .map((goalName) => ({ goal: goalName, count: counts.get(goalName) ?? 0 }))
+      .filter((row) => row.count > 0)
+      .sort((a, b) => b.count - a.count);
+  }, [history]);
+
+  const filteredHistory = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) {
+      return history;
+    }
+
+    return history.filter((item) => {
+      return (
+        item.title.toLowerCase().includes(q) ||
+        item.goal.toLowerCase().includes(q) ||
+        item.outputText.toLowerCase().includes(q)
+      );
+    });
+  }, [history, search]);
+
+  const exportPdf = () => {
+    if (!editableScript.trim()) {
+      toast.error("No script to export.");
+      return;
+    }
+
+    const pdf = new jsPDF({ unit: "pt", format: "a4" });
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const titleText = result?.title || title || "Script";
+
+    pdf.setFontSize(18);
+    pdf.text(titleText, 40, 44);
+    pdf.setFontSize(10);
+    pdf.text(`Generated: ${format(new Date(), "MMM d, yyyy h:mm a")}`, 40, 62);
+
+    const lines = pdf.splitTextToSize(editableScript, pageWidth - 80);
+    const rows = lines.map((line: string, index: number) => [index + 1, line]);
+
+    autoTable(pdf, {
+      startY: 78,
+      head: [["#", "Script"]],
+      body: rows,
+      styles: {
+        fontSize: 9,
+        cellPadding: 4,
+        overflow: "linebreak",
+      },
+      headStyles: {
+        fillColor: [20, 45, 95],
+      },
+      columnStyles: {
+        0: { cellWidth: 26 },
+        1: { cellWidth: pageWidth - 120 },
+      },
+    });
+
+    pdf.save(`${titleText.replace(/\s+/g, "-").toLowerCase()}.pdf`);
+    toast.success("PDF exported");
+  };
+
   const applyTemplate = (template: ScriptTemplate) => {
     setTitle(template.title);
     setGoal(template.goal);
@@ -114,8 +204,53 @@ export function ScriptStudioClient() {
     setAudience(template.audience);
     setPrompt(template.prompt);
     setCallToAction(template.callToAction);
+    setActiveTab("create");
     toast.success("Template loaded.");
   };
+
+  const removeScript = async (id: string) => {
+    try {
+      await fetchJson<null>(`/api/media/script/${id}`, { method: "DELETE" });
+      await refreshAll();
+      toast.success("Script deleted.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Delete failed.");
+    }
+  };
+
+  const loadFromHistory = (item: ScriptHistoryItem) => {
+    setTitle(item.title);
+    setGoal(item.goal);
+    setTone(item.tone);
+    setLength(item.length);
+    setAudience(item.audience);
+    setPrompt(item.prompt);
+    setCallToAction(item.callToAction ?? "");
+    setEditableScript(item.outputText);
+    setResult({
+      id: item.id,
+      title: item.title,
+      prompt: item.prompt,
+      script: item.outputText,
+      outputText: item.outputText,
+      createdAt: item.createdAt,
+      generatedAt: item.createdAt,
+      status: item.status,
+      meta: {
+        goal: item.goal,
+        tone: item.tone,
+        length: item.length,
+        audience: item.audience,
+        callToAction: item.callToAction,
+      },
+    });
+    setActiveTab("create");
+    toast.success("Loaded from history.");
+  };
+
+  useEffect(() => {
+    void refreshAll();
+  }, []);
 
   const generate = async () => {
     if (!prompt.trim()) {
@@ -164,11 +299,39 @@ export function ScriptStudioClient() {
               <p className="text-sm text-blue-100/70">Generate high-converting scripts for social, sales, and campaigns</p>
             </div>
           </div>
-          <button className="rounded-lg border border-white/20 px-4 py-2 text-sm text-slate-200 hover:bg-white/10">Export PDF</button>
+          <button className="rounded-lg border border-white/20 px-4 py-2 text-sm text-slate-200 hover:bg-white/10" onClick={exportPdf}>Export PDF</button>
+        </div>
+
+        <div className="flex flex-wrap gap-2 px-5 py-3 text-sm">
+          {[
+            { key: "create", label: "Create" },
+            { key: "my-scripts", label: "My Scripts" },
+            { key: "templates", label: "Templates" },
+            { key: "history", label: "History" },
+          ].map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key as StudioTab)}
+              className={`rounded-lg px-3 py-1.5 transition ${
+                activeTab === tab.key ? "bg-blue-500/25 text-white" : "text-slate-300 hover:bg-white/10"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+
+          <div className="ml-auto w-full max-w-md">
+            <input
+              className="w-full rounded-xl border border-white/15 bg-[#06132d] px-3 py-2 text-sm text-slate-100 placeholder:text-slate-400 outline-none focus:border-blue-300/40"
+              placeholder="Search templates or history"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+            />
+          </div>
         </div>
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-[1fr_1.1fr]">
+      {activeTab === "create" ? <section className="grid gap-4 xl:grid-cols-[1fr_1.1fr]">
         <article className="panel animate-float-in rounded-2xl p-4">
           <div className="mb-3 flex items-center gap-2">
             <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-500 text-xs font-semibold">1</span>
@@ -325,6 +488,103 @@ export function ScriptStudioClient() {
           </article>
         </div>
       </section>
+      : null}
+
+      {activeTab === "my-scripts" ? (
+        <section className="panel animate-float-in rounded-2xl p-4">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-white">My Scripts</h2>
+            <button className="text-sm text-blue-300 hover:text-blue-200" onClick={refreshAll}>Refresh</button>
+          </div>
+
+          {groupedScripts.length === 0 ? (
+            <p className="rounded-xl border border-white/10 bg-[#071633] px-4 py-6 text-center text-sm text-slate-400">
+              No scripts yet. Generate your first script in Create.
+            </p>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {groupedScripts.map((item) => (
+                <div key={item.goal} className="rounded-xl border border-white/10 bg-[#071633] p-4">
+                  <h3 className="text-base font-semibold capitalize text-white">{item.goal}</h3>
+                  <p className="mt-2 text-sm text-slate-300">{item.count} scripts</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      ) : null}
+
+      {activeTab === "templates" ? (
+        <section className="panel animate-float-in rounded-2xl p-4">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-white">Templates</h2>
+            <p className="text-sm text-slate-300">Quick-start script frameworks</p>
+          </div>
+
+          {filteredTemplates.length === 0 ? (
+            <p className="rounded-xl border border-white/10 bg-[#071633] px-4 py-6 text-center text-sm text-slate-400">No templates found.</p>
+          ) : (
+            <div className="grid gap-3 lg:grid-cols-2">
+              {filteredTemplates.map((item) => (
+                <button key={item.id} className="rounded-xl border border-white/10 bg-[#071633] p-4 text-left hover:bg-[#0b1d42]" onClick={() => applyTemplate(item)}>
+                  <p className="text-base font-semibold text-white">{item.title}</p>
+                  <p className="mt-1 text-xs text-slate-400">{item.goal} • {item.tone} • {item.length}</p>
+                  <p className="mt-2 line-clamp-2 text-sm text-slate-300">{item.prompt}</p>
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
+      ) : null}
+
+      {activeTab === "history" ? (
+        <section className="panel animate-float-in rounded-2xl p-4">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-white">Script History</h2>
+            <button className="text-sm text-blue-300 hover:text-blue-200" onClick={refreshAll}>Refresh</button>
+          </div>
+
+          {filteredHistory.length === 0 ? (
+            <p className="rounded-xl border border-white/10 bg-[#071633] px-4 py-6 text-center text-sm text-slate-400">No history found.</p>
+          ) : (
+            <div className="space-y-2">
+              {filteredHistory.map((item) => (
+                <div key={item.id} className="grid gap-3 rounded-xl border border-white/10 bg-[#071633] px-3 py-3 md:grid-cols-[1fr_120px_220px] md:items-center">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-slate-100">{item.title}</p>
+                    <p className="text-xs text-slate-400 capitalize">{item.goal} • {item.tone} • {item.length}</p>
+                    <p className="text-xs text-slate-500">{format(new Date(item.createdAt), "MMM d, h:mm a")}</p>
+                  </div>
+                  <p className="text-xs text-slate-400">{item.status}</p>
+                  <div className="flex items-center gap-2">
+                    <button className="rounded-lg border border-white/15 bg-[#0a1d40] px-3 py-1.5 text-sm text-slate-100 hover:bg-[#102852]" onClick={() => loadFromHistory(item)}>
+                      Load
+                    </button>
+                    <button className="rounded-lg border border-rose-400/30 bg-rose-500/10 px-3 py-1.5 text-sm text-rose-300 hover:bg-rose-500/20" onClick={() => void removeScript(item.id)}>
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      ) : null}
+
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <StatCard label="Total Scripts" value={stats.totalScriptsGenerated.toString()} />
+        <StatCard label="Most Used Goal" value={stats.mostUsedGoal} />
+        <StatCard label="Recent (7 days)" value={stats.recentScripts.toString()} />
+      </section>
+    </div>
+  );
+}
+
+function StatCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="panel animate-float-in rounded-2xl bg-gradient-to-r from-[#081733] to-[#0a1d40] p-4">
+      <p className="text-[11px] uppercase tracking-[0.13em] text-blue-100/70">{label}</p>
+      <p className="display-font mt-2 text-3xl font-semibold text-white">{value}</p>
     </div>
   );
 }
