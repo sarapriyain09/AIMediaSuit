@@ -83,6 +83,70 @@ Voice, Script, Presentation, Podcast, and Subtitle modules are implemented. Back
 - Background Music Studio
 - Avatar Studio
 
+## Studio Complexity Overview
+
+- Background Music Studio has lower implementation complexity and should be built first.
+- Avatar Studio is significantly more advanced and depends on audio, lip sync, and video animation pipelines.
+
+## Background Music Studio (Planned)
+
+Description:
+
+- Add and mix background music to voiceovers and videos to create professional content.
+
+Core features:
+
+- Music library categories: Corporate, Motivational, Ambient, Podcast, Cinematic, Technology, Happy
+- Music controls: volume, fade in, fade out, loop, preview
+- AI recommendation from script or prompt context (example: Corporate Technology)
+- Audio mixing pipeline: Voice Audio + Background Music -> Final MP3
+- Video integration pipeline: Voice + Music + Images -> MP4 Video
+- Outputs: MP3, WAV, MP4
+
+Technology:
+
+- FFmpeg
+- Local royalty-free music library
+- Future providers: Suno, Mubert, Stable Audio
+
+## Avatar Studio (Planned)
+
+Description:
+
+- Create talking AI presenters from scripts and voiceovers.
+
+Core features:
+
+- Avatar selection: Business Male, Business Female, Teacher, Trainer, Customer Support
+- Talking avatar pipeline: Script -> Voice Studio -> Avatar -> MP4 Video
+- Lip synchronization between generated speech and facial movement
+- Background selection: Office, Studio, Classroom, Home
+- Language support: English, Tamil, Hindi, Spanish
+- Custom avatar upload: photo/video input for personalized presenter output
+- AI clone (future): face clone + voice clone
+- Outputs: MP4 (vertical and landscape)
+
+Technology:
+
+- Lip sync: Wav2Lip, SadTalker
+- Animation: LivePortrait
+- Voice: OpenAI TTS
+- Video: FFmpeg
+
+## Recommended Build Order (Roadmap)
+
+1. ✅ Voice Studio
+2. ✅ Script Studio
+3. ✅ Image Studio
+4. ✅ Video Studio
+5. 🎵 Background Music Studio
+6. 🧑 Avatar Studio
+
+## 50-Character Descriptions
+
+- Background Music Studio: Add and mix music for professional content.
+- Avatar Studio: Create talking AI presenters from text and voice.
+
 ## Tech Stack
 
 - Framework: Next.js 16 (App Router)
