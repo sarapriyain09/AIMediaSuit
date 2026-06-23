@@ -67,28 +67,18 @@ Voice, Script, Presentation, Podcast, and Subtitle modules are implemented. Back
 
 ## Tech Stack
 
-Platform Baseline Alignment:
-
-- This app follows the common Velynxia framework baseline used across Growth apps.
-- Database is intentionally PostgreSQL + Prisma for this app (exception to SQLite baseline).
-- Shared toolkit dependencies are included for cross-app consistency: `dnd-kit`, `nodemailer`, `twilio`, `jspdf`, `jspdf-autotable`.
-
-Framework:
-
-- Next.js 16 App Router
-
-Language:
-
-- TypeScript
-
-UI:
-
-- React 19
-- Tailwind CSS 4
-
-Authentication:
-
-- next-auth
+- Framework: Next.js 16 (App Router)
+- Language: TypeScript
+- UI: React 19 + Tailwind CSS 4
+- Auth: next-auth
+- Database: better-Postgres
+- Drag and drop: dnd-kit
+- Email transport: nodemailer
+- SMS transport: Twilio
+- PDF output: jsPDF + jspdf-autotable
+- Linting: ESLint (Next config)
+- ORM: Prisma
+- AI Provider: OpenAI
 
 Default Admin Login:
 
@@ -96,36 +86,9 @@ Default Admin Login:
 - Password: Velynxia@2024!
 - Configure with env vars: ADMIN_EMAIL, ADMIN_PASSWORD, ADMIN_USER_ID
 
-Database:
-
-- PostgreSQL
-
-ORM:
-
-- Prisma
-
-AI Provider:
-
-- OpenAI
-
-Shared Toolkit Baseline:
-
-- dnd-kit
-- nodemailer
-- Twilio
-- jsPDF
-- jspdf-autotable
-
 Storage:
 
 - Local filesystem
-
-Deployment:
-
-- Docker
-- Docker Compose
-- Raspberry Pi 5
-- Cloudflare Tunnel
 
 ## Voice Studio Features
 
@@ -200,8 +163,6 @@ Deployment:
 - lib/storage: Local file storage service
 - prisma: Prisma schema
 - storage/audio: Generated audio files
-- deploy/nginx: Nginx reverse proxy
-- deploy/cloudflared: Cloudflare tunnel config
 
 ## Database Model
 
@@ -264,29 +225,9 @@ Enums:
 
 - http://localhost:3000
 
-## Docker Run
+## Deployment
 
-1. Configure .env.
-2. Start services:
-
-	docker compose up --build -d
-
-Note:
-
-- The `migrate` service runs Prisma migrations once (`prisma migrate deploy`) before `aimedia` starts.
-- If you need to rerun migrations manually: `docker compose run --rm migrate`
-
-3. Open:
-
-- http://localhost:8080
-
-## Cloudflare Tunnel
-
-After setting CLOUDFLARE_TUNNEL_TOKEN:
-
-docker compose --profile tunnel up -d
-
-Set hostname aimedia.velynxia.com to the tunnel.
+- Local dev runtime via `npm run dev`
 
 ## Security Maintenance
 
