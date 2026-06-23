@@ -317,6 +317,7 @@ export function ScriptStudioClient() {
       createdAt: item.createdAt,
       generatedAt: item.createdAt,
       status: item.status,
+      isFavorite: item.isFavorite,
       meta: {
         goal: item.goal,
         tone: item.tone,
