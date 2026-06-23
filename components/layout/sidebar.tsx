@@ -6,8 +6,8 @@ import { usePathname } from "next/navigation";
 
 const navItems = [
   { href: "/dashboard/voice-studio", label: "Voice Studio", available: true },
-  { href: "/dashboard/script-studio", label: "Script Studio", available: false },
-  { href: "/dashboard/podcast-studio", label: "Podcast Studio", available: false },
+  { href: "/dashboard/script-studio", label: "Script Studio", available: true },
+  { href: "/dashboard/podcast-studio", label: "Podcast Studio", available: true },
   { href: "/dashboard/video-studio", label: "Video Studio", available: false },
 ];
 

@@ -66,3 +66,46 @@ export interface ScriptStatistics {
   mostUsedGoal: string;
   recentScripts: number;
 }
+
+export const podcastFormatList = ["interview", "solo", "panel", "storytelling"] as const;
+export const podcastToneList = ["professional", "conversational", "energetic", "educational"] as const;
+export const podcastLengthList = ["short", "medium", "long"] as const;
+
+export type PodcastFormat = (typeof podcastFormatList)[number];
+export type PodcastTone = (typeof podcastToneList)[number];
+export type PodcastLength = (typeof podcastLengthList)[number];
+
+export interface GeneratePodcastPayload {
+  title?: string;
+  topic: string;
+  audience: string;
+  format: PodcastFormat;
+  tone: PodcastTone;
+  length: PodcastLength;
+  hosts?: string;
+  outline?: string;
+  prompt: string;
+}
+
+export interface PodcastHistoryItem {
+  id: string;
+  title: string;
+  topic: string;
+  audience: string;
+  format: PodcastFormat;
+  tone: PodcastTone;
+  length: PodcastLength;
+  hosts: string[];
+  outline: string;
+  prompt: string;
+  script: string;
+  isFavorite: boolean;
+  status: GenerationStatus;
+  createdAt: string;
+}
+
+export interface PodcastStatistics {
+  totalEpisodesGenerated: number;
+  mostUsedFormat: string;
+  recentEpisodes: number;
+}
