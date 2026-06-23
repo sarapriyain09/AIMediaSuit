@@ -5,13 +5,17 @@ import { format } from "date-fns";
 import toast from "react-hot-toast";
 import type {
   PresentationGoal,
+  PresentationComment,
   PresentationHistoryItem,
+  PresentationImageItem,
   PresentationLength,
   PresentationStatistics,
   PresentationTone,
+  PresentationVersion,
+  VoiceType,
 } from "@/types/media";
 
-type StudioTab = "create" | "my-decks" | "templates" | "history";
+type StudioTab = "create" | "images" | "subtitles" | "voice-over" | "collab" | "my-decks" | "templates" | "history";
 type HistoryFilter = "all" | "favorites";
 
 type GeneratePresentationResponse = {
@@ -20,6 +24,23 @@ type GeneratePresentationResponse = {
   outputText: string;
   slideCount: number;
   includeSpeakerNotes: boolean;
+  visualStyle: string | null;
+  imagePrompt: string | null;
+  images: PresentationImageItem[];
+  subtitleSourceLanguage: string | null;
+  subtitleTargetLanguages: string[];
+  subtitleCues: Array<{ startSec: number; endSec: number; text: string }>;
+  subtitleTranslations: Record<string, string[]>;
+  voiceoverText: string | null;
+  voiceover: {
+    voice: VoiceType;
+    speed: number;
+    outputUrl: string | null;
+    durationSec: number;
+    trimStartSec: number;
+    trimEndSec: number;
+    trimmedDurationSec: number;
+  } | null;
   isFavorite: boolean;
   status: "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
   createdAt: string;
@@ -111,16 +132,47 @@ export function PresentationStudioClient() {
   const [topic, setTopic] = useState("");
   const [prompt, setPrompt] = useState("");
   const [includeSpeakerNotes, setIncludeSpeakerNotes] = useState(true);
+  const [visualStyle, setVisualStyle] = useState("clean cinematic presentation style");
+  const [imagePrompt, setImagePrompt] = useState("");
+  const [sourceLanguage, setSourceLanguage] = useState("English");
+  const [targetLanguagesInput, setTargetLanguagesInput] = useState("Spanish, French");
+  const [voiceoverVoice, setVoiceoverVoice] = useState<VoiceType>("alloy");
+  const [voiceoverSpeed, setVoiceoverSpeed] = useState(1);
+  const [trimStartSec, setTrimStartSec] = useState(0);
+  const [trimEndSec, setTrimEndSec] = useState(0);
 
   const [loading, setLoading] = useState(false);
+  const [assetLoading, setAssetLoading] = useState(false);
   const [result, setResult] = useState<GeneratePresentationResponse | null>(null);
   const [editableDeck, setEditableDeck] = useState("");
   const [history, setHistory] = useState<PresentationHistoryItem[]>([]);
+  const [images, setImages] = useState<PresentationImageItem[]>([]);
+  const [subtitleCues, setSubtitleCues] = useState<Array<{ startSec: number; endSec: number; text: string }>>([]);
+  const [subtitleTranslations, setSubtitleTranslations] = useState<Record<string, string[]>>({});
+  const [voiceoverText, setVoiceoverText] = useState("");
+  const [voiceoverMeta, setVoiceoverMeta] = useState<GeneratePresentationResponse["voiceover"]>(null);
+  const [comments, setComments] = useState<PresentationComment[]>([]);
+  const [commentDraft, setCommentDraft] = useState("");
+  const [versions, setVersions] = useState<PresentationVersion[]>([]);
+  const [versionNote, setVersionNote] = useState("");
+  const [draggingCueIndex, setDraggingCueIndex] = useState<number | null>(null);
+
   const [stats, setStats] = useState<PresentationStatistics>({
     totalDecksGenerated: 0,
     mostUsedGoal: "N/A",
     recentDecks: 0,
   });
+
+  const selectedPresentationId = result?.id ?? null;
+
+  const targetLanguages = useMemo(
+    () =>
+      targetLanguagesInput
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean),
+    [targetLanguagesInput],
+  );
 
   const refreshAll = async () => {
     const [newHistory, newStats] = await Promise.all([
@@ -130,6 +182,20 @@ export function PresentationStudioClient() {
 
     setHistory(newHistory);
     setStats(newStats);
+  };
+
+  const loadCommentsAndVersions = async (presentationId: string) => {
+    try {
+      const [loadedComments, loadedVersions] = await Promise.all([
+        fetchJson<PresentationComment[]>(`/api/media/presentation/${presentationId}/comments`),
+        fetchJson<PresentationVersion[]>(`/api/media/presentation/${presentationId}/versions`),
+      ]);
+      setComments(loadedComments);
+      setVersions(loadedVersions);
+    } catch {
+      setComments([]);
+      setVersions([]);
+    }
   };
 
   useEffect(() => {
@@ -234,6 +300,15 @@ export function PresentationStudioClient() {
     setTopic(item.topic);
     setPrompt(item.prompt);
     setIncludeSpeakerNotes(item.includeSpeakerNotes);
+    setVisualStyle(item.visualStyle || "clean cinematic presentation style");
+    setImagePrompt(item.imagePrompt || "");
+    setSourceLanguage(item.subtitleSourceLanguage || "English");
+    setTargetLanguagesInput(item.subtitleTargetLanguages.join(", "));
+    setImages(item.images || []);
+    setSubtitleCues(item.subtitleCues || []);
+    setSubtitleTranslations(item.subtitleTranslations || {});
+    setVoiceoverText(item.voiceoverText || item.outputText);
+    setVoiceoverMeta(item.voiceover || null);
     setEditableDeck(item.outputText);
     setResult({
       id: item.id,
@@ -241,6 +316,15 @@ export function PresentationStudioClient() {
       outputText: item.outputText,
       slideCount: item.slideCount,
       includeSpeakerNotes: item.includeSpeakerNotes,
+      visualStyle: item.visualStyle,
+      imagePrompt: item.imagePrompt,
+      images: item.images,
+      subtitleSourceLanguage: item.subtitleSourceLanguage,
+      subtitleTargetLanguages: item.subtitleTargetLanguages,
+      subtitleCues: item.subtitleCues,
+      subtitleTranslations: item.subtitleTranslations,
+      voiceoverText: item.voiceoverText,
+      voiceover: item.voiceover,
       isFavorite: item.isFavorite,
       status: item.status,
       createdAt: item.createdAt,
@@ -253,6 +337,7 @@ export function PresentationStudioClient() {
         topic: item.topic,
       },
     });
+    void loadCommentsAndVersions(item.id);
     setActiveTab("create");
     toast.success("Loaded from history.");
   };
@@ -286,11 +371,22 @@ export function PresentationStudioClient() {
           topic,
           prompt,
           includeSpeakerNotes,
+          visualStyle,
+          imagePrompt,
+          subtitleSourceLanguage: sourceLanguage,
+          subtitleTargetLanguages: targetLanguages,
+          voiceoverVoice,
+          voiceoverSpeed,
         }),
       });
 
       setResult(generated);
       setEditableDeck(generated.outputText);
+      setImages(generated.images || []);
+      setSubtitleCues(generated.subtitleCues || []);
+      setSubtitleTranslations(generated.subtitleTranslations || {});
+      setVoiceoverText(generated.voiceoverText || generated.outputText);
+      setVoiceoverMeta(generated.voiceover);
       toast.success("Presentation generated successfully.");
       await refreshAll();
     } catch (error) {
@@ -299,6 +395,174 @@ export function PresentationStudioClient() {
       setLoading(false);
     }
   };
+
+  const generateImages = async () => {
+    if (!imagePrompt.trim()) {
+      toast.error("Enter an image prompt.");
+      return;
+    }
+
+    setAssetLoading(true);
+    try {
+      const res = await fetchJson<{ items: PresentationImageItem[] }>("/api/media/presentation/images/generate", {
+        method: "POST",
+        body: JSON.stringify({
+          presentationId: selectedPresentationId,
+          prompt: imagePrompt,
+          visualStyle,
+          count: 3,
+          size: "1536x1024",
+        }),
+      });
+
+      setImages((prev) => [...prev, ...res.items]);
+      toast.success("Images generated.");
+      await refreshAll();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to generate images.");
+    } finally {
+      setAssetLoading(false);
+    }
+  };
+
+  const generateSubtitles = async () => {
+    setAssetLoading(true);
+    try {
+      const res = await fetchJson<{
+        transcript: string;
+        sourceLanguage: string;
+        cues: Array<{ startSec: number; endSec: number; text: string }>;
+        translations: Record<string, string[]>;
+      }>("/api/media/presentation/subtitles/generate", {
+        method: "POST",
+        body: JSON.stringify({
+          presentationId: selectedPresentationId,
+          voiceoverText: voiceoverText || editableDeck,
+          sourceLanguage,
+          targetLanguages,
+        }),
+      });
+
+      setVoiceoverText(res.transcript);
+      setSourceLanguage(res.sourceLanguage);
+      setSubtitleCues(res.cues);
+      setSubtitleTranslations(res.translations);
+      toast.success("Subtitles generated.");
+      await refreshAll();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to generate subtitles.");
+    } finally {
+      setAssetLoading(false);
+    }
+  };
+
+  const generateVoiceover = async () => {
+    if (!voiceoverText.trim()) {
+      toast.error("Enter voice-over text first.");
+      return;
+    }
+
+    setAssetLoading(true);
+    try {
+      const res = await fetchJson<GeneratePresentationResponse["voiceover"]>("/api/media/presentation/voiceover/generate", {
+        method: "POST",
+        body: JSON.stringify({
+          presentationId: selectedPresentationId,
+          text: voiceoverText,
+          voice: voiceoverVoice,
+          speed: voiceoverSpeed,
+          trimStartSec,
+          trimEndSec,
+        }),
+      });
+      setVoiceoverMeta(res);
+      toast.success("Voice-over generated.");
+      await refreshAll();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to generate voice-over.");
+    } finally {
+      setAssetLoading(false);
+    }
+  };
+
+  const addComment = async () => {
+    if (!selectedPresentationId) {
+      toast.error("Generate or load a presentation first.");
+      return;
+    }
+
+    if (!commentDraft.trim()) {
+      toast.error("Comment cannot be empty.");
+      return;
+    }
+
+    try {
+      await fetchJson<PresentationComment>(`/api/media/presentation/${selectedPresentationId}/comments`, {
+        method: "POST",
+        body: JSON.stringify({ content: commentDraft }),
+      });
+      setCommentDraft("");
+      await loadCommentsAndVersions(selectedPresentationId);
+      toast.success("Comment added.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to add comment.");
+    }
+  };
+
+  const saveVersion = async () => {
+    if (!selectedPresentationId) {
+      toast.error("Generate or load a presentation first.");
+      return;
+    }
+
+    if (!editableDeck.trim()) {
+      toast.error("Deck content is empty.");
+      return;
+    }
+
+    try {
+      await fetchJson<PresentationVersion>(`/api/media/presentation/${selectedPresentationId}/versions`, {
+        method: "POST",
+        body: JSON.stringify({
+          note: versionNote,
+          snapshotText: editableDeck,
+        }),
+      });
+      setVersionNote("");
+      await loadCommentsAndVersions(selectedPresentationId);
+      toast.success("Version saved.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to save version.");
+    }
+  };
+
+  const moveCue = (fromIndex: number, toIndex: number) => {
+    setSubtitleCues((prev) => {
+      if (toIndex < 0 || toIndex >= prev.length || fromIndex === toIndex) {
+        return prev;
+      }
+      const clone = [...prev];
+      const [moved] = clone.splice(fromIndex, 1);
+      clone.splice(toIndex, 0, moved);
+      return clone;
+    });
+  };
+
+  const syncLoadedMetadata = async () => {
+    if (!selectedPresentationId) {
+      return;
+    }
+    await loadCommentsAndVersions(selectedPresentationId);
+  };
+
+  useEffect(() => {
+    if (!selectedPresentationId) {
+      setComments([]);
+      setVersions([]);
+      return;
+    }
+    void syncLoadedMetadata();
+  }, [selectedPresentationId]);
 
   return (
     <div className="space-y-4 text-slate-100">
@@ -334,6 +598,10 @@ export function PresentationStudioClient() {
         <div className="flex flex-wrap gap-2 px-5 py-3 text-sm">
           {[
             { key: "create", label: "Create" },
+            { key: "images", label: "Images" },
+            { key: "subtitles", label: "Subtitles" },
+            { key: "voice-over", label: "Voice Over" },
+            { key: "collab", label: "Collab" },
             { key: "my-decks", label: "My Decks" },
             { key: "templates", label: "Templates" },
             { key: "history", label: "History" },
@@ -510,6 +778,297 @@ export function PresentationStudioClient() {
               ) : null}
             </article>
           </div>
+        </section>
+      ) : null}
+
+      {activeTab === "images" ? (
+        <section className="panel animate-float-in rounded-2xl p-4">
+          <h2 className="text-xl font-semibold text-white">AI Image Integration</h2>
+          <p className="mt-1 text-sm text-slate-300">Generate on-brand slide visuals and keep them attached to this deck.</p>
+
+          <div className="mt-3 grid gap-3 md:grid-cols-2">
+            <div>
+              <label className="text-sm text-blue-100/75">Visual style</label>
+              <input
+                className="mt-2 w-full rounded-xl border border-white/15 bg-[#05122a] px-3 py-2 text-sm text-slate-100"
+                value={visualStyle}
+                onChange={(event) => setVisualStyle(event.target.value)}
+                placeholder="minimal editorial style"
+              />
+            </div>
+            <div>
+              <label className="text-sm text-blue-100/75">Image prompt</label>
+              <input
+                className="mt-2 w-full rounded-xl border border-white/15 bg-[#05122a] px-3 py-2 text-sm text-slate-100"
+                value={imagePrompt}
+                onChange={(event) => setImagePrompt(event.target.value)}
+                placeholder="hero visual for product launch"
+              />
+            </div>
+          </div>
+
+          <button
+            className="mt-4 rounded-lg border border-white/20 bg-[#0a1d40] px-4 py-2 text-sm text-slate-100 hover:bg-[#102852] disabled:opacity-50"
+            onClick={() => void generateImages()}
+            disabled={assetLoading}
+            aria-label="Generate presentation images"
+          >
+            {assetLoading ? "Generating..." : "Generate Images"}
+          </button>
+
+          {images.length === 0 ? (
+            <p className="mt-4 rounded-xl border border-white/10 bg-[#071633] px-4 py-6 text-center text-sm text-slate-400">No images yet.</p>
+          ) : (
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {images.map((item) => (
+                <figure key={item.id} className="overflow-hidden rounded-xl border border-white/10 bg-[#071633]">
+                  <img src={item.url} alt={item.prompt || "Generated presentation visual"} className="h-40 w-full object-cover" />
+                  <figcaption className="p-2 text-xs text-slate-300">{item.prompt}</figcaption>
+                </figure>
+              ))}
+            </div>
+          )}
+        </section>
+      ) : null}
+
+      {activeTab === "subtitles" ? (
+        <section className="panel animate-float-in rounded-2xl p-4">
+          <h2 className="text-xl font-semibold text-white">Subtitle Studio</h2>
+          <p className="mt-1 text-sm text-slate-300">Generate, edit, translate, and reorder subtitle cues for presentations.</p>
+
+          <div className="mt-3 grid gap-3 md:grid-cols-2">
+            <div>
+              <label className="text-sm text-blue-100/75">Source language</label>
+              <input
+                className="mt-2 w-full rounded-xl border border-white/15 bg-[#05122a] px-3 py-2 text-sm text-slate-100"
+                value={sourceLanguage}
+                onChange={(event) => setSourceLanguage(event.target.value)}
+                placeholder="English"
+              />
+            </div>
+            <div>
+              <label className="text-sm text-blue-100/75">Target languages (comma separated)</label>
+              <input
+                className="mt-2 w-full rounded-xl border border-white/15 bg-[#05122a] px-3 py-2 text-sm text-slate-100"
+                value={targetLanguagesInput}
+                onChange={(event) => setTargetLanguagesInput(event.target.value)}
+                placeholder="Spanish, French"
+              />
+            </div>
+          </div>
+
+          <button
+            className="mt-4 rounded-lg border border-white/20 bg-[#0a1d40] px-4 py-2 text-sm text-slate-100 hover:bg-[#102852] disabled:opacity-50"
+            onClick={() => void generateSubtitles()}
+            disabled={assetLoading}
+            aria-label="Generate subtitles"
+          >
+            {assetLoading ? "Generating..." : "Generate Subtitles"}
+          </button>
+
+          <div className="mt-4 space-y-2">
+            {subtitleCues.map((cue, index) => (
+              <div
+                key={`${cue.startSec}-${index}`}
+                className="rounded-xl border border-white/10 bg-[#071633] p-3"
+                draggable
+                onDragStart={() => setDraggingCueIndex(index)}
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={() => {
+                  if (draggingCueIndex !== null) {
+                    moveCue(draggingCueIndex, index);
+                  }
+                  setDraggingCueIndex(null);
+                }}
+              >
+                <div className="mb-2 flex items-center justify-between gap-2 text-xs text-slate-400">
+                  <span>
+                    {cue.startSec.toFixed(2)}s - {cue.endSec.toFixed(2)}s
+                  </span>
+                  <div className="flex gap-2">
+                    <button className="rounded border border-white/10 px-2 py-1" onClick={() => moveCue(index, index - 1)} aria-label="Move subtitle cue up">
+                      Up
+                    </button>
+                    <button className="rounded border border-white/10 px-2 py-1" onClick={() => moveCue(index, index + 1)} aria-label="Move subtitle cue down">
+                      Down
+                    </button>
+                  </div>
+                </div>
+                <textarea
+                  className="min-h-16 w-full rounded-lg border border-white/15 bg-[#05122a] px-3 py-2 text-sm text-slate-100"
+                  value={cue.text}
+                  onChange={(event) =>
+                    setSubtitleCues((prev) => prev.map((item, i) => (i === index ? { ...item, text: event.target.value } : item)))
+                  }
+                  aria-label={`Subtitle cue ${index + 1}`}
+                />
+              </div>
+            ))}
+            {subtitleCues.length === 0 ? <p className="text-sm text-slate-400">No subtitle cues yet.</p> : null}
+          </div>
+
+          {Object.keys(subtitleTranslations).length > 0 ? (
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              {Object.entries(subtitleTranslations).map(([language, lines]) => (
+                <article key={language} className="rounded-xl border border-white/10 bg-[#071633] p-3">
+                  <h3 className="text-sm font-semibold text-white">{language}</h3>
+                  <p className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap text-xs text-slate-300">{lines.join("\n")}</p>
+                </article>
+              ))}
+            </div>
+          ) : null}
+        </section>
+      ) : null}
+
+      {activeTab === "voice-over" ? (
+        <section className="panel animate-float-in rounded-2xl p-4">
+          <h2 className="text-xl font-semibold text-white">Voice-Over Enhancement</h2>
+          <p className="mt-1 text-sm text-slate-300">Draft narration, pick a voice, control speed, and generate downloadable voice-over audio.</p>
+
+          <label className="mt-3 block text-sm text-blue-100/75">Narration text</label>
+          <textarea
+            className="mt-2 min-h-36 w-full rounded-xl border border-white/15 bg-[#05122a] px-3 py-3 text-sm text-slate-100"
+            value={voiceoverText}
+            onChange={(event) => setVoiceoverText(event.target.value)}
+            placeholder="Paste narration script for your slides..."
+          />
+
+          <div className="mt-3 grid gap-3 md:grid-cols-4">
+            <div>
+              <label className="text-sm text-blue-100/75">Voice</label>
+              <select className="mt-2 w-full rounded-lg border border-white/15 bg-[#050f26] px-3 py-2 text-sm" value={voiceoverVoice} onChange={(event) => setVoiceoverVoice(event.target.value as VoiceType)}>
+                <option value="alloy">alloy</option>
+                <option value="ash">ash</option>
+                <option value="ballad">ballad</option>
+                <option value="coral">coral</option>
+                <option value="echo">echo</option>
+                <option value="sage">sage</option>
+                <option value="shimmer">shimmer</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-sm text-blue-100/75">Speed</label>
+              <input
+                type="number"
+                step="0.1"
+                min={0.5}
+                max={2}
+                className="mt-2 w-full rounded-lg border border-white/15 bg-[#050f26] px-3 py-2 text-sm"
+                value={voiceoverSpeed}
+                onChange={(event) => setVoiceoverSpeed(Number(event.target.value) || 1)}
+              />
+            </div>
+            <div>
+              <label className="text-sm text-blue-100/75">Trim start (sec)</label>
+              <input
+                type="number"
+                min={0}
+                max={120}
+                className="mt-2 w-full rounded-lg border border-white/15 bg-[#050f26] px-3 py-2 text-sm"
+                value={trimStartSec}
+                onChange={(event) => setTrimStartSec(Number(event.target.value) || 0)}
+              />
+            </div>
+            <div>
+              <label className="text-sm text-blue-100/75">Trim end (sec)</label>
+              <input
+                type="number"
+                min={0}
+                max={120}
+                className="mt-2 w-full rounded-lg border border-white/15 bg-[#050f26] px-3 py-2 text-sm"
+                value={trimEndSec}
+                onChange={(event) => setTrimEndSec(Number(event.target.value) || 0)}
+              />
+            </div>
+          </div>
+
+          <button
+            className="mt-4 rounded-lg border border-white/20 bg-[#0a1d40] px-4 py-2 text-sm text-slate-100 hover:bg-[#102852] disabled:opacity-50"
+            onClick={() => void generateVoiceover()}
+            disabled={assetLoading}
+            aria-label="Generate voice-over"
+          >
+            {assetLoading ? "Generating..." : "Generate Voice-Over"}
+          </button>
+
+          {voiceoverMeta ? (
+            <div className="mt-4 rounded-xl border border-white/10 bg-[#071633] p-3 text-sm text-slate-200">
+              <p>Voice: {voiceoverMeta.voice}</p>
+              <p>Speed: {voiceoverMeta.speed}</p>
+              <p>Duration: {voiceoverMeta.durationSec}s (trimmed: {voiceoverMeta.trimmedDurationSec}s)</p>
+              {voiceoverMeta.outputUrl ? (
+                <audio className="mt-2 w-full" controls src={voiceoverMeta.outputUrl} aria-label="Generated voice-over preview" />
+              ) : null}
+            </div>
+          ) : null}
+        </section>
+      ) : null}
+
+      {activeTab === "collab" ? (
+        <section className="grid gap-4 xl:grid-cols-2">
+          <article className="panel animate-float-in rounded-2xl p-4">
+            <h2 className="text-xl font-semibold text-white">Comments</h2>
+            <p className="mt-1 text-sm text-slate-300">Share feedback with teammates in real time when connected to DB.</p>
+            <div className="mt-3 flex gap-2">
+              <input
+                className="w-full rounded-xl border border-white/15 bg-[#05122a] px-3 py-2 text-sm text-slate-100"
+                value={commentDraft}
+                onChange={(event) => setCommentDraft(event.target.value)}
+                placeholder="Add a comment"
+                aria-label="Comment input"
+              />
+              <button className="rounded-lg border border-white/20 px-4 py-2 text-sm hover:bg-white/10" onClick={() => void addComment()}>
+                Post
+              </button>
+            </div>
+            <div className="mt-3 space-y-2">
+              {comments.map((item) => (
+                <div key={item.id} className="rounded-lg border border-white/10 bg-[#071633] px-3 py-2">
+                  <p className="text-xs text-slate-400">{item.author} | {format(new Date(item.createdAt), "MMM d, h:mm a")}</p>
+                  <p className="text-sm text-slate-200">{item.content}</p>
+                </div>
+              ))}
+              {comments.length === 0 ? <p className="text-sm text-slate-400">No comments yet.</p> : null}
+            </div>
+          </article>
+
+          <article className="panel animate-float-in rounded-2xl p-4">
+            <h2 className="text-xl font-semibold text-white">Version Control</h2>
+            <p className="mt-1 text-sm text-slate-300">Snapshot deck revisions and restore any previous version.</p>
+            <div className="mt-3 flex gap-2">
+              <input
+                className="w-full rounded-xl border border-white/15 bg-[#05122a] px-3 py-2 text-sm text-slate-100"
+                value={versionNote}
+                onChange={(event) => setVersionNote(event.target.value)}
+                placeholder="Version note (optional)"
+                aria-label="Version note"
+              />
+              <button className="rounded-lg border border-white/20 px-4 py-2 text-sm hover:bg-white/10" onClick={() => void saveVersion()}>
+                Save
+              </button>
+            </div>
+            <div className="mt-3 space-y-2">
+              {versions.map((item) => (
+                <div key={item.id} className="rounded-lg border border-white/10 bg-[#071633] px-3 py-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-semibold text-white">v{item.versionNumber}</p>
+                    <button
+                      className="rounded border border-white/15 px-2 py-1 text-xs text-slate-200 hover:bg-white/10"
+                      onClick={() => {
+                        setEditableDeck(item.snapshotText);
+                        toast.success(`Loaded version ${item.versionNumber}.`);
+                      }}
+                    >
+                      Restore
+                    </button>
+                  </div>
+                  <p className="text-xs text-slate-400">{format(new Date(item.createdAt), "MMM d, h:mm a")}</p>
+                  {item.note ? <p className="mt-1 text-xs text-slate-300">{item.note}</p> : null}
+                </div>
+              ))}
+              {versions.length === 0 ? <p className="text-sm text-slate-400">No versions yet.</p> : null}
+            </div>
+          </article>
         </section>
       ) : null}
 

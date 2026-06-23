@@ -140,6 +140,49 @@ export interface GeneratePresentationPayload {
   topic: string;
   prompt: string;
   includeSpeakerNotes?: boolean;
+  visualStyle?: string;
+  imagePrompt?: string;
+  subtitleSourceLanguage?: string;
+  subtitleTargetLanguages?: string[];
+  voiceoverVoice?: VoiceType;
+  voiceoverSpeed?: number;
+}
+
+export interface PresentationImageItem {
+  id: string;
+  url: string;
+  prompt: string;
+}
+
+export interface PresentationSubtitleCue {
+  startSec: number;
+  endSec: number;
+  text: string;
+}
+
+export interface PresentationVoiceoverMeta {
+  voice: VoiceType;
+  speed: number;
+  outputUrl: string | null;
+  durationSec: number;
+  trimStartSec: number;
+  trimEndSec: number;
+  trimmedDurationSec: number;
+}
+
+export interface PresentationComment {
+  id: string;
+  author: string;
+  content: string;
+  createdAt: string;
+}
+
+export interface PresentationVersion {
+  id: string;
+  versionNumber: number;
+  note: string | null;
+  snapshotText: string;
+  createdAt: string;
 }
 
 export interface PresentationHistoryItem {
@@ -154,6 +197,15 @@ export interface PresentationHistoryItem {
   outputText: string;
   slideCount: number;
   includeSpeakerNotes: boolean;
+  visualStyle: string | null;
+  imagePrompt: string | null;
+  images: PresentationImageItem[];
+  subtitleSourceLanguage: string | null;
+  subtitleTargetLanguages: string[];
+  subtitleCues: PresentationSubtitleCue[];
+  subtitleTranslations: Record<string, string[]>;
+  voiceoverText: string | null;
+  voiceover: PresentationVoiceoverMeta | null;
   isFavorite: boolean;
   status: GenerationStatus;
   createdAt: string;

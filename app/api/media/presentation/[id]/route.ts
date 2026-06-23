@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
 import { resolveUserId } from "@/lib/auth/user-id";
@@ -107,6 +108,15 @@ export async function POST(request: NextRequest, { params }: Params) {
         outputText: source.outputText,
         slideCount: source.slideCount,
         includeSpeakerNotes: source.includeSpeakerNotes,
+        visualStyle: source.visualStyle,
+        imagePrompt: source.imagePrompt,
+        images: source.images ?? Prisma.JsonNull,
+        subtitleSourceLanguage: source.subtitleSourceLanguage,
+        subtitleTargetLanguages: source.subtitleTargetLanguages,
+        subtitleCues: source.subtitleCues ?? Prisma.JsonNull,
+        subtitleTranslations: source.subtitleTranslations ?? Prisma.JsonNull,
+        voiceoverText: source.voiceoverText,
+        voiceover: source.voiceover ?? Prisma.JsonNull,
         status: source.status,
         isFavorite: false,
       },

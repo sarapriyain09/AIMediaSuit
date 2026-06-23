@@ -183,12 +183,47 @@ model PresentationGeneration {
   outputText         String
   slideCount         Int                @default(0)
   includeSpeakerNotes Boolean           @default(true)
+  visualStyle        String?
+  imagePrompt        String?
+  images             Json?
+  subtitleSourceLanguage String?
+  subtitleTargetLanguages String[]      @default([])
+  subtitleCues       Json?
+  subtitleTranslations Json?
+  voiceoverText      String?
+  voiceover          Json?
   isFavorite         Boolean            @default(false)
   status             GenerationStatus   @default(COMPLETED)
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
+  comments           PresentationComment[]
+  versions           PresentationVersion[]
 
   @@index([userId, createdAt])
+}
+
+model PresentationComment {
+  id             String               @id @default(uuid()) @db.Uuid
+  presentationId String               @db.Uuid
+  presentation   PresentationGeneration @relation(fields: [presentationId], references: [id], onDelete: Cascade)
+  author         String
+  content        String
+  createdAt      DateTime             @default(now())
+
+  @@index([presentationId, createdAt])
+}
+
+model PresentationVersion {
+  id             String               @id @default(uuid()) @db.Uuid
+  presentationId String               @db.Uuid
+  presentation   PresentationGeneration @relation(fields: [presentationId], references: [id], onDelete: Cascade)
+  versionNumber  Int
+  note           String?
+  snapshotText   String
+  createdAt      DateTime             @default(now())
+
+  @@unique([presentationId, versionNumber])
+  @@index([presentationId, createdAt])
 }
 
 model SubtitleGeneration {

@@ -30,6 +30,21 @@ export async function GET(request: NextRequest) {
         outputText: row.outputText,
         slideCount: row.slideCount,
         includeSpeakerNotes: row.includeSpeakerNotes,
+        visualStyle: row.visualStyle,
+        imagePrompt: row.imagePrompt,
+        images: Array.isArray(row.images) ? row.images : [],
+        subtitleSourceLanguage: row.subtitleSourceLanguage,
+        subtitleTargetLanguages: row.subtitleTargetLanguages,
+        subtitleCues: Array.isArray(row.subtitleCues) ? row.subtitleCues : [],
+        subtitleTranslations:
+          row.subtitleTranslations && typeof row.subtitleTranslations === "object" && !Array.isArray(row.subtitleTranslations)
+            ? row.subtitleTranslations
+            : {},
+        voiceoverText: row.voiceoverText,
+        voiceover:
+          row.voiceover && typeof row.voiceover === "object" && !Array.isArray(row.voiceover)
+            ? row.voiceover
+            : null,
         isFavorite: row.isFavorite,
         status: row.status,
         createdAt: row.createdAt.toISOString(),

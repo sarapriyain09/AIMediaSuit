@@ -11,9 +11,9 @@ Voice, Script, Presentation, Podcast, and Subtitle modules are implemented. Back
 3. ✅ Presentation Studio
 4. ✅ Podcast Studio
 5. ✅ Subtitle Studio
-6. ✅ Background Music Studio
+6. ⏳ Background Music Studio
 7. ✅ Video Studio
-8. ✅ Avatar Studio
+8. ⏳ Avatar Studio
 
 ## Current Build Focus
 
@@ -47,6 +47,12 @@ Voice, Script, Presentation, Podcast, and Subtitle modules are implemented. Back
 	- AI slide/deck generation
 	- My Decks, Templates, History, Favorites, Duplicate, Delete
 	- Editable output with copy/download
+- Presentation Studio (Phase 2)
+	- AI image integration for slide visuals
+	- Subtitle support (generate, edit, translate, reorder cues)
+	- Voice-over enhancement (voice, speed, trim, preview)
+	- Collaboration tools (comments and version snapshots)
+	- Expanded Presentation APIs for images, subtitles, voice-over, comments, and versions
 - Podcast Studio (Phase 1 + Phase 2 beta)
 	- Episode planning and script generation
 	- Templates, history, favorites, duplicate, delete
@@ -68,7 +74,6 @@ Voice, Script, Presentation, Podcast, and Subtitle modules are implemented. Back
 ## Future Modules
 
 - Background Music Studio
-- Video Studio
 - Avatar Studio
 
 ## Tech Stack
@@ -138,6 +143,13 @@ Storage:
 - PATCH /api/media/presentation/[id]
 - POST /api/media/presentation/[id]
 - GET /api/media/presentation/statistics
+- POST /api/media/presentation/images/generate
+- POST /api/media/presentation/subtitles/generate
+- POST /api/media/presentation/voiceover/generate
+- GET /api/media/presentation/[id]/comments
+- POST /api/media/presentation/[id]/comments
+- GET /api/media/presentation/[id]/versions
+- POST /api/media/presentation/[id]/versions
 - POST /api/media/subtitle/generate
 - GET /api/media/subtitle/history
 - DELETE /api/media/subtitle/[id]
@@ -158,7 +170,7 @@ Storage:
 - app/dashboard/presentation-studio: Presentation Studio page
 - app/dashboard/podcast-studio: Podcast Studio page
 - app/dashboard/subtitle-studio: Subtitle Studio page
-- app/dashboard/video-studio: Coming soon page
+- app/dashboard/video-studio: Video Studio page
 - app/api/media/voice: Voice API handlers
 - app/api/media/script: Script API handlers
 - app/api/media/presentation: Presentation API handlers
@@ -180,7 +192,7 @@ Storage:
 
 ## Database Model
 
-MediaGenerations table fields:
+MediaGeneration table fields:
 
 - id (UUID)
 - userId (UUID)
@@ -207,14 +219,133 @@ ScriptGeneration table fields:
 - length
 - audience
 - callToAction
+- isFavorite
+- status
+- createdAt
+- updatedAt
+
+PodcastGeneration table fields:
+
+- id (UUID)
+- userId (UUID)
+- title
+- topic
+- audience
+- format
+- tone
+- length
+- hosts
+- outline
+- prompt
+- script
+- outputUrl
+- duration
+- segmentCount
+- segments
+- isFavorite
+- status
+- createdAt
+- updatedAt
+
+PresentationGeneration table fields:
+
+- id (UUID)
+- userId (UUID)
+- title
+- goal
+- tone
+- length
+- audience
+- topic
+- prompt
+- outputText
+- slideCount
+- includeSpeakerNotes
+- visualStyle
+- imagePrompt
+- images
+- subtitleSourceLanguage
+- subtitleTargetLanguages
+- subtitleCues
+- subtitleTranslations
+- voiceoverText
+- voiceover
+- isFavorite
+- status
+- createdAt
+- updatedAt
+
+PresentationComment table fields:
+
+- id (UUID)
+- presentationId (UUID)
+- author
+- content
+- createdAt
+
+PresentationVersion table fields:
+
+- id (UUID)
+- presentationId (UUID)
+- versionNumber
+- note
+- snapshotText
+- createdAt
+
+SubtitleGeneration table fields:
+
+- id (UUID)
+- userId (UUID)
+- title
+- topic
+- language
+- format
+- tone
+- sourceText
+- outputText
+- cueCount
+- includeTimestamps
+- isFavorite
+- status
+- createdAt
+- updatedAt
+
+VideoGeneration table fields:
+
+- id (UUID)
+- userId (UUID)
+- title
+- topic
+- audience
+- style
+- aspectRatio
+- durationSec
+- prompt
+- outputText
+- sceneCount
+- includeVoiceover
+- outputUrl
+- isFavorite
 - status
 - createdAt
 - updatedAt
 
 Enums:
 
-- ModuleType: VOICE, SCRIPT, PODCAST, VIDEO, AVATAR
+- ModuleType: VOICE, SCRIPT, PODCAST, SUBTITLE, BACKGROUND_MUSIC, VIDEO, AVATAR
 - GenerationStatus: PENDING, PROCESSING, COMPLETED, FAILED
+- VoiceType: alloy, ash, ballad, coral, echo, sage, shimmer
+- ScriptGoal: social, ad, youtube, email, sales
+- ScriptTone: professional, friendly, bold, educational, storytelling
+- ScriptLength: short, medium, long
+- PodcastFormat: interview, solo, panel, storytelling
+- PodcastTone: professional, conversational, energetic, educational
+- PodcastLength: short, medium, long
+- PresentationGoal: pitch, training, webinar, sales, report
+- PresentationTone: professional, persuasive, educational, storytelling
+- PresentationLength: short, medium, long
+- SubtitleFormat: srt, vtt, captions
+- SubtitleTone: verbatim, readable, engaging
 
 ## Local Development
 

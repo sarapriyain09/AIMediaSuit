@@ -1,4 +1,4 @@
-import { GenerationStatus, PresentationGoal, PresentationLength, PresentationTone } from "@prisma/client";
+import { GenerationStatus, PresentationGoal, PresentationLength, PresentationTone, Prisma } from "@prisma/client";
 import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { resolveUserId } from "@/lib/auth/user-id";
@@ -126,6 +126,15 @@ export async function POST(request: NextRequest) {
             outputText,
             slideCount,
             includeSpeakerNotes: input.includeSpeakerNotes,
+            visualStyle: input.visualStyle,
+            imagePrompt: input.imagePrompt || null,
+            images: [],
+            subtitleSourceLanguage: input.subtitleSourceLanguage,
+            subtitleTargetLanguages: input.subtitleTargetLanguages,
+            subtitleCues: [],
+            subtitleTranslations: {},
+            voiceoverText: "",
+            voiceover: Prisma.JsonNull,
             status: GenerationStatus.COMPLETED,
           },
         });
@@ -136,6 +145,15 @@ export async function POST(request: NextRequest) {
           outputText: created.outputText,
           slideCount: created.slideCount,
           includeSpeakerNotes: created.includeSpeakerNotes,
+          visualStyle: created.visualStyle,
+          imagePrompt: created.imagePrompt,
+          images: [],
+          subtitleSourceLanguage: created.subtitleSourceLanguage,
+          subtitleTargetLanguages: created.subtitleTargetLanguages,
+          subtitleCues: [],
+          subtitleTranslations: {},
+          voiceoverText: created.voiceoverText,
+          voiceover: created.voiceover,
           isFavorite: created.isFavorite,
           status: created.status,
           createdAt: created.createdAt.toISOString(),
@@ -159,6 +177,15 @@ export async function POST(request: NextRequest) {
       outputText,
       slideCount,
       includeSpeakerNotes: input.includeSpeakerNotes,
+      visualStyle: input.visualStyle,
+      imagePrompt: input.imagePrompt || null,
+      images: [],
+      subtitleSourceLanguage: input.subtitleSourceLanguage,
+      subtitleTargetLanguages: input.subtitleTargetLanguages,
+      subtitleCues: [],
+      subtitleTranslations: {},
+      voiceoverText: "",
+      voiceover: null,
       isFavorite: false,
       status: "COMPLETED",
       createdAt: new Date().toISOString(),
