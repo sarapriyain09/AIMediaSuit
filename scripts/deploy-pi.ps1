@@ -31,15 +31,18 @@ git pull --rebase --autostash origin "$BRANCH"
 echo "[2/4] Installing dependencies"
 npm install
 
-echo "[3/4] Restarting PM2 process"
+echo "[3/5] Building production bundle"
+npm run build
+
+echo "[4/5] Restarting PM2 process"
 if pm2 describe "$PROCESS_NAME" >/dev/null 2>&1; then
-  pm2 restart "$PROCESS_NAME"
+  pm2 restart "$PROCESS_NAME" --update-env
 else
   pm2 start npm --name "$PROCESS_NAME" -- start
 fi
 pm2 save
 
-echo "[4/4] Verifying local app health"
+echo "[5/5] Verifying local app health"
 curl -fsS --retry 20 --retry-delay 1 --retry-all-errors "http://127.0.0.1:$PORT" >/dev/null
 pm2 status "$PROCESS_NAME"
 '@

@@ -31,7 +31,16 @@ export function buildAvatarInputText(input: {
   return JSON.stringify(input);
 }
 
-export function parseAvatarInputText(inputText: string) {
+export function parseAvatarInputText(inputText: string): {
+  script: string;
+  preset: AvatarPreset;
+  background: AvatarBackground;
+  language: AvatarLanguage;
+  aspectRatio: AvatarAspectRatio;
+  voiceAudioUrl: string | null;
+  backgroundImageUrl: string | null;
+  renderMode: AvatarRenderMode;
+} {
   try {
     const parsed = JSON.parse(inputText) as Partial<typeof defaults>;
 
