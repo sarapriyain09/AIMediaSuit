@@ -2,7 +2,7 @@
 
 AI Media Suite is a standalone module in the Velynxia Growth Platform.
 
-Voice, Script, Presentation, Podcast, and Subtitle modules are implemented. Background Music Studio is the next active build target.
+Voice, Script, Presentation, Podcast, Subtitle, and Video modules are implemented. Background Music Studio has started (Phase 1), and Avatar Studio has started (Phase 2).
 
 ## Studio Build Order
 
@@ -11,13 +11,14 @@ Voice, Script, Presentation, Podcast, and Subtitle modules are implemented. Back
 3. ✅ Presentation Studio
 4. ✅ Podcast Studio
 5. ✅ Subtitle Studio
-6. ⏳ Background Music Studio
+6. 🔨 Background Music Studio (Phase 1 started)
 7. ✅ Video Studio
-8. ⏳ Avatar Studio
+8. 🔨 Avatar Studio (Phase 2 started)
 
 ## Current Build Focus
 
-- Background Music Studio (Studio 6) is the next module to build.
+- Background Music Studio (Studio 6) is actively in development.
+- Avatar Studio is now active with Phase 2 queue/sync workflows.
 
 ## Implemented Modules
 
@@ -80,28 +81,37 @@ Voice, Script, Presentation, Podcast, and Subtitle modules are implemented. Back
 
 ## Future Modules
 
-- Background Music Studio
-- Avatar Studio
+- None
 
 ## Studio Complexity Overview
 
 - Background Music Studio has lower implementation complexity and should be built first.
 - Avatar Studio is significantly more advanced and depends on audio, lip sync, and video animation pipelines.
 
-## Background Music Studio (Planned)
+## Background Music Studio (Phase 1 Started)
 
 Description:
 
 - Add and mix background music to voiceovers and videos to create professional content.
 
-Core features:
+Core features (Phase 1 delivered):
+
+- Studio UI with Create, Templates, and History tabs
+- Category picker for Corporate, Motivational, Ambient, Podcast, Cinematic, Technology, Happy
+- Mix controls: music volume, voice volume, fade in, fade out, loop
+- Voice handoff support through voice audio URL input
+- FFmpeg-based audio mix output as MP3
+- API support for generate, history, statistics, and delete
+
+Core features (next):
 
 - Music library categories: Corporate, Motivational, Ambient, Podcast, Cinematic, Technology, Happy
 - Music controls: volume, fade in, fade out, loop, preview
 - AI recommendation from script or prompt context (example: Corporate Technology)
 - Audio mixing pipeline: Voice Audio + Background Music -> Final MP3
 - Video integration pipeline: Voice + Music + Images -> MP4 Video
-- Outputs: MP3, WAV, MP4
+- Outputs (current): MP3
+- Outputs (planned): WAV, MP4
 
 Technology:
 
@@ -109,11 +119,28 @@ Technology:
 - Local royalty-free music library
 - Future providers: Suno, Mubert, Stable Audio
 
-## Avatar Studio (Planned)
+## Avatar Studio (Phase 2 Started)
 
 Description:
 
 - Create talking AI presenters from scripts and voiceovers.
+- Current state: avatar queue/sync generation, templates, history, and statistics are available.
+
+Core features (Phase 1 delivered):
+
+- Studio UI with Create, Templates, and History tabs
+- Avatar preset selection: Business Male, Business Female, Teacher, Trainer, Customer Support
+- Background selection: Office, Studio, Classroom, Home
+- Language and aspect ratio controls
+- Avatar generation job API (Phase 1 stub) with persistence to MediaGeneration
+- History, delete, and statistics APIs for avatar jobs
+
+Core features (Phase 2 delivered):
+
+- Queue-ready API contract using PENDING and PROCESSING statuses
+- Optional voice audio URL and background image URL inputs
+- Sync render mode with FFmpeg placeholder MP4 output
+- Queue-only mode for async worker pipeline integration
 
 Core features:
 
@@ -236,6 +263,16 @@ Storage:
 - POST /api/media/video/render
 - POST /api/media/video/assets/search
 - POST /api/media/video/assets/generate
+- POST /api/media/background-music/generate
+- GET /api/media/background-music/history
+- DELETE /api/media/background-music/[id]
+- GET /api/media/background-music/statistics
+- POST /api/media/avatar/generate
+- GET /api/media/avatar/history
+- DELETE /api/media/avatar/[id]
+- GET /api/media/avatar/statistics
+- POST /api/media/avatar/[id]/enqueue
+- POST /api/media/avatar/[id]/process
 
 ## Project Layout
 
@@ -244,19 +281,25 @@ Storage:
 - app/dashboard/presentation-studio: Presentation Studio page
 - app/dashboard/podcast-studio: Podcast Studio page
 - app/dashboard/subtitle-studio: Subtitle Studio page
+- app/dashboard/background-music-studio: Background Music Studio page
 - app/dashboard/video-studio: Video Studio page
+- app/dashboard/avatar-studio: Avatar Studio page
 - app/api/media/voice: Voice API handlers
 - app/api/media/script: Script API handlers
 - app/api/media/presentation: Presentation API handlers
 - app/api/media/podcast: Podcast API handlers
 - app/api/media/subtitle: Subtitle API handlers
+- app/api/media/background-music: Background Music API handlers
+- app/api/media/avatar: Avatar API handlers
 - app/api/media/video: Video API handlers
 - app/media/audio/[...path]: Local audio file serving route
 - app/media/video/[...path]: Local video file serving route
 - components/layout: Dashboard shell components
 - components/voice-studio: Voice Studio UI client component
 - components/subtitle-studio: Subtitle Studio UI client component
+- components/background-music-studio: Background Music Studio UI client component
 - components/video-studio: Video Studio UI client component
+- components/avatar-studio: Avatar Studio UI client component
 - lib/auth: next-auth config and user resolution
 - lib/db: Prisma client
 - lib/providers: Provider interfaces and provider factory

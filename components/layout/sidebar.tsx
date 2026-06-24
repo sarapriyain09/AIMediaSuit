@@ -10,7 +10,9 @@ const navItems = [
   { href: "/dashboard/presentation-studio", label: "Presentation Studio", available: true },
   { href: "/dashboard/podcast-studio", label: "Podcast Studio", available: true },
   { href: "/dashboard/subtitle-studio", label: "Subtitle Studio", available: true },
+  { href: "/dashboard/background-music-studio", label: "Background Music Studio", available: true },
   { href: "/dashboard/video-studio", label: "Video Studio", available: true },
+  { href: "/dashboard/avatar-studio", label: "Avatar Studio", available: true },
 ];
 
 export function Sidebar() {

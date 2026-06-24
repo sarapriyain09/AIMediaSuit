@@ -320,3 +320,102 @@ export interface VideoStatistics {
   mostUsedStyle: string;
   recentVideos: number;
 }
+
+export const backgroundMusicCategoryList = [
+  "corporate",
+  "motivational",
+  "ambient",
+  "podcast",
+  "cinematic",
+  "technology",
+  "happy",
+] as const;
+
+export const backgroundMusicOutputFormatList = ["mp3"] as const;
+
+export type BackgroundMusicCategory = (typeof backgroundMusicCategoryList)[number];
+export type BackgroundMusicOutputFormat = (typeof backgroundMusicOutputFormatList)[number];
+
+export interface GenerateBackgroundMusicPayload {
+  title?: string;
+  prompt: string;
+  category: BackgroundMusicCategory;
+  voiceAudioUrl?: string;
+  musicVolume: number;
+  voiceVolume: number;
+  fadeInSec?: number;
+  fadeOutSec?: number;
+  loopMusic?: boolean;
+  outputFormat?: BackgroundMusicOutputFormat;
+}
+
+export interface BackgroundMusicHistoryItem {
+  id: string;
+  title: string;
+  prompt: string;
+  category: BackgroundMusicCategory;
+  voiceAudioUrl: string | null;
+  outputUrl: string | null;
+  duration: number | null;
+  musicVolume: number;
+  voiceVolume: number;
+  fadeInSec: number;
+  fadeOutSec: number;
+  loopMusic: boolean;
+  outputFormat: BackgroundMusicOutputFormat;
+  status: GenerationStatus;
+  createdAt: string;
+}
+
+export interface BackgroundMusicStatistics {
+  totalTracksGenerated: number;
+  mostUsedCategory: string;
+  recentTracks: number;
+}
+
+export const avatarPresetList = ["business-male", "business-female", "teacher", "trainer", "support"] as const;
+export const avatarBackgroundList = ["office", "studio", "classroom", "home"] as const;
+export const avatarLanguageList = ["english", "tamil", "hindi", "spanish"] as const;
+export const avatarAspectRatioList = ["16:9", "9:16"] as const;
+export const avatarRenderModeList = ["queue", "sync"] as const;
+
+export type AvatarPreset = (typeof avatarPresetList)[number];
+export type AvatarBackground = (typeof avatarBackgroundList)[number];
+export type AvatarLanguage = (typeof avatarLanguageList)[number];
+export type AvatarAspectRatio = (typeof avatarAspectRatioList)[number];
+export type AvatarRenderMode = (typeof avatarRenderModeList)[number];
+
+export interface GenerateAvatarPayload {
+  title?: string;
+  script: string;
+  preset: AvatarPreset;
+  background: AvatarBackground;
+  language: AvatarLanguage;
+  aspectRatio: AvatarAspectRatio;
+  voiceAudioUrl?: string;
+  backgroundImageUrl?: string;
+  renderMode?: AvatarRenderMode;
+}
+
+export interface AvatarHistoryItem {
+  id: string;
+  title: string;
+  script: string;
+  preset: AvatarPreset;
+  background: AvatarBackground;
+  language: AvatarLanguage;
+  aspectRatio: AvatarAspectRatio;
+  voiceAudioUrl: string | null;
+  backgroundImageUrl: string | null;
+  renderMode: AvatarRenderMode;
+  outputUrl: string | null;
+  duration: number | null;
+  status: GenerationStatus;
+  createdAt: string;
+}
+
+export interface AvatarStatistics {
+  totalAvatarsGenerated: number;
+  mostUsedPreset: string;
+  recentAvatars: number;
+}
