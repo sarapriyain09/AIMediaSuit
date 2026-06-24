@@ -493,6 +493,10 @@ Enums:
 ## Deployment
 
 - Local dev runtime via `npm run dev`
+- Pi deploy (update, install, restart, verify): `npm run deploy:pi`
+- Optional overrides example:
+
+	`powershell -ExecutionPolicy Bypass -File ./scripts/deploy-pi.ps1 -HostName "sarapriyain@192.168.0.64" -ProcessName "aimedia" -Port 8080 -PublicUrl "https://aimedia.velynxia.com"`
 
 ## Security Maintenance
 
